@@ -1,5 +1,9 @@
 # CLAUDE.md — Multi-LLM RAG (Chat with Your Documents, Compared Across Models)
 
+> **Working mode:** this is a learning project. See **LEARNING.md** — Claude
+> mentors and reviews but writes NO code unless the user explicitly types
+> `WRITE THE CODE`, `SHOW THE SOLUTION`, or `GIVE THE IMPLEMENTATION`.
+
 ## Project Overview
 
 Academic certification project (IIT Patna AI/ML). This is the **combination of
