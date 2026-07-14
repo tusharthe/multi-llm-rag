@@ -32,16 +32,28 @@ orchestration frameworks, not re-implementing vector math.
 - **Chroma** (via `langchain-chroma`) — local persistent vector store in
   `./chroma_db/` (simple, no server)
 - **Streamlit** — UI: uploader, side-by-side answer columns, continue-with-model chat
-- **Models (cheap/fast tier, one per provider):**
-  - OpenAI: `gpt-4o-mini` (`langchain-openai`) — also used for embeddings
-    (`text-embedding-3-small`)
-  - Anthropic: `claude-haiku-4-5` (`langchain-anthropic`)
+- **Embeddings:** Google `gemini-embedding-001` (`langchain-google-genai`).
+  Chosen because Google's free tier covers it; keeps the RAG index working
+  without paid OpenAI credit. (Swap to OpenAI `text-embedding-3-small` later
+  if desired — one line in `rag.py`.)
+- **Chat models (cheap/fast tier, one per provider):**
   - Google: `gemini-2.5-flash` (`langchain-google-genai`)
+  - OpenAI: `gpt-4o-mini` (`langchain-openai`)
+  - Anthropic: `claude-haiku-4-5` (`langchain-anthropic`)
 - **python-dotenv** for API keys
+
+> **Current key status (2026-07-15):** only the Google key has credit; OpenAI
+> and Anthropic keys are present but their accounts are unfunded (429 / 400
+> billing errors). The app runs today on Google alone and will fan out to the
+> others automatically once they have credit — no code change needed.
 
 Rules:
 - If a provider's API key is missing, **skip that model gracefully** (show a
   note in the UI) — the app must work with 1, 2, or 3 keys.
+- If a present key fails at call time (billing/quota 400/429, rate limit), the
+  model node must catch it and return an error string for that column — the
+  other models' answers must still show. (This is how OpenAI/Anthropic behave
+  today with unfunded accounts.)
 - Keep it SIMPLE. No agents, no tools, no re-ranking, no streaming. The graph
   has exactly: retrieve → {openai, anthropic, google} in parallel → collect.
 
@@ -69,7 +81,7 @@ Rules:
 2. **Chunking:** `RecursiveCharacterTextSplitter`, `chunk_size=500`,
    `chunk_overlap=100` (constants at top of `ingestion.py`). Each chunk keeps
    metadata: source filename + chunk index.
-3. **Index:** `text-embedding-3-small` embeddings into Chroma, persisted to
+3. **Index:** `gemini-embedding-001` embeddings into Chroma, persisted to
    `./chroma_db/` so restarts don't re-embed. "Build Index" and "Clear Index"
    buttons + doc/chunk stats in the sidebar.
 4. **Retrieval:** Chroma retriever, top k=4 chunks with similarity scores.

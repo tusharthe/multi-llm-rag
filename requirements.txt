@@ -1,0 +1,11 @@
+streamlit
+langchain
+langgraph
+langchain-openai
+langchain-anthropic
+langchain-google-genai
+langchain-chroma
+langchain-community
+pypdf
+docx2txt
+python-dotenv
