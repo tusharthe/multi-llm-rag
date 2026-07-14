@@ -1,0 +1,16 @@
+# Secrets — never commit the API key
+.env
+
+# Persisted vector store (rebuilt from documents)
+store/
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
