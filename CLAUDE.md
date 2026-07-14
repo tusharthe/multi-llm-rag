@@ -32,30 +32,46 @@ orchestration frameworks, not re-implementing vector math.
 - **Chroma** (via `langchain-chroma`) — local persistent vector store in
   `./chroma_db/` (simple, no server)
 - **Streamlit** — UI: uploader, side-by-side answer columns, continue-with-model chat
-- **Embeddings:** Google `gemini-embedding-001` (`langchain-google-genai`).
-  Chosen because Google's free tier covers it; keeps the RAG index working
-  without paid OpenAI credit. (Swap to OpenAI `text-embedding-3-small` later
-  if desired — one line in `rag.py`.)
-- **Chat models (cheap/fast tier, one per provider):**
-  - Google: `gemini-2.5-flash` (`langchain-google-genai`)
-  - OpenAI: `gpt-4o-mini` (`langchain-openai`)
-  - Anthropic: `claude-haiku-4-5` (`langchain-anthropic`)
-- **python-dotenv** for API keys
+- **The three providers (what the brief requires, and what the UI always shows):**
+  - **OpenAI** — `gpt-4o-mini` (`langchain-openai`)
+  - **Anthropic** — `claude-haiku-4-5` (`langchain-anthropic`)
+  - **Gemini** — `gemini-2.5-flash` (`langchain-google-genai`)
+- **python-dotenv** — API keys + the dev-mode flag
 
-> **Current key status (2026-07-15):** only the Google key has credit; OpenAI
-> and Anthropic keys are present but their accounts are unfunded (429 / 400
-> billing errors). The app runs today on Google alone and will fan out to the
-> others automatically once they have credit — no code change needed.
+### Local development bypass (KEY DESIGN POINT)
 
-Rules:
-- If a provider's API key is missing, **skip that model gracefully** (show a
-  note in the UI) — the app must work with 1, 2, or 3 keys.
-- If a present key fails at call time (billing/quota 400/429, rate limit), the
-  model node must catch it and return an error string for that column — the
-  other models' answers must still show. (This is how OpenAI/Anthropic behave
-  today with unfunded accounts.)
+Real cloud API calls cost money and the user's OpenAI/Anthropic accounts are
+unfunded. So the app has ONE switch, `USE_OLLAMA` in `.env`, that redirects
+each provider slot to a local Ollama model for free offline development. The
+UI still shows three columns labelled OpenAI / Anthropic / Gemini — only the
+backend changes.
+
+| UI column (fixed) | `USE_OLLAMA=false` (production) | `USE_OLLAMA=true` (local dev) |
+|---|---|---|
+| OpenAI · gpt-4o-mini | `ChatOpenAI` | Ollama `OLLAMA_OPENAI_MODEL` (default `llama3.2:3b`) |
+| Anthropic · claude-haiku-4-5 | `ChatAnthropic` | Ollama `OLLAMA_ANTHROPIC_MODEL` (default `qwen2.5:3b`) |
+| Gemini · gemini-2.5-flash | `ChatGoogleGenerativeAI` | Ollama `OLLAMA_GEMINI_MODEL` (default `gemma3:4b`) |
+| Embeddings | OpenAI `text-embedding-3-small` | Ollama `nomic-embed-text` |
+
+Rules for this switch:
+- `USE_OLLAMA` is read once in `models.py`. In dev mode, each slot is a
+  `ChatOllama(model=...)`; the three local model names are env-overridable so
+  the user can map any locally-pulled model to a slot (must fit an 8 GB GPU).
+- Distinct local models per slot keep the side-by-side comparison genuinely
+  different while developing offline. All three are also used for embeddings
+  choice as shown above.
+- The provider labels shown to the user NEVER change with the switch — the
+  academic deliverable is always "OpenAI + Anthropic + Gemini".
+
+Rules (general):
+- **Model registry is dynamic:** in production, include a provider only if its
+  API key is set; in dev, include a local model only if the Ollama server is
+  reachable. The app must work with any non-empty subset (1, 2, or 3 models).
+- If a model fails at call time (Ollama down, billing 400/429, rate limit,
+  timeout), the model node must catch it and return an error string for that
+  column — the other models' answers must still show.
 - Keep it SIMPLE. No agents, no tools, no re-ranking, no streaming. The graph
-  has exactly: retrieve → {openai, anthropic, google} in parallel → collect.
+  has exactly: retrieve → {openai, anthropic, gemini} in parallel → collect.
 
 ## Project Structure
 
@@ -68,10 +84,23 @@ Rules:
 ├── prompts.py          # grounded system prompt + context formatting with [1][2] citations
 ├── chroma_db/          # persisted Chroma store (gitignored)
 ├── requirements.txt
-├── .env.example        # OPENAI_API_KEY / ANTHROPIC_API_KEY / GOOGLE_API_KEY
+├── .env.example        # optional cloud keys + optional OLLAMA_BASE_URL
 ├── .gitignore          # must include .env and chroma_db/
 └── README.md
 ```
+
+## Prerequisite for local dev (USE_OLLAMA=true): Ollama with models pulled
+
+```bash
+# Ollama must be installed and running (http://localhost:11434)
+ollama pull nomic-embed-text    # embeddings
+ollama pull llama3.2:3b         # OpenAI slot stand-in
+ollama pull qwen2.5:3b          # Anthropic slot stand-in
+ollama pull gemma3:4b           # Gemini slot stand-in
+```
+
+For production (`USE_OLLAMA=false`) Ollama is not needed — set the three cloud
+API keys in `.env` instead.
 
 ## Core Requirements
 
@@ -81,7 +110,8 @@ Rules:
 2. **Chunking:** `RecursiveCharacterTextSplitter`, `chunk_size=500`,
    `chunk_overlap=100` (constants at top of `ingestion.py`). Each chunk keeps
    metadata: source filename + chunk index.
-3. **Index:** `gemini-embedding-001` embeddings into Chroma, persisted to
+3. **Index:** embeddings into Chroma (OpenAI `text-embedding-3-small` in prod,
+   Ollama `nomic-embed-text` in dev — same `USE_OLLAMA` switch), persisted to
    `./chroma_db/` so restarts don't re-embed. "Build Index" and "Clear Index"
    buttons + doc/chunk stats in the sidebar.
 4. **Retrieval:** Chroma retriever, top k=4 chunks with similarity scores.
@@ -110,17 +140,19 @@ Rules:
 - Every module importable on its own; Streamlit imports only in `app.py`.
 - All API calls wrapped in try/except; errors shown in the UI per model/file,
   never a crash. One model failing must not hide the other models' answers.
-- No hardcoded keys — `.env` only; warn in the UI which keys are missing.
+- No hardcoded keys — `.env` only; warn in the UI which models are unavailable
+  (Ollama down, or a cloud key missing/unfunded).
 - Constants (CHUNK_SIZE, CHUNK_OVERLAP, TOP_K, model names) at the top of
   their modules.
 
 ## How to Run
 
 ```bash
+# 1. Ensure Ollama is running and models are pulled (see prerequisite above)
 python -m venv venv
 venv\Scripts\activate           # macOS/Linux: source venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env            # add whichever API keys you have
+cp .env.example .env            # optional: add cloud keys / OLLAMA_BASE_URL
 streamlit run app.py
 ```
 
@@ -130,6 +162,7 @@ streamlit run app.py
 streamlit
 langchain
 langgraph
+langchain-ollama
 langchain-openai
 langchain-anthropic
 langchain-google-genai

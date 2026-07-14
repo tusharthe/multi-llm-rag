@@ -1,6 +1,7 @@
 streamlit
 langchain
 langgraph
+langchain-ollama
 langchain-openai
 langchain-anthropic
 langchain-google-genai
