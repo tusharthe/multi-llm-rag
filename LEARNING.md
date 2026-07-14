@@ -47,26 +47,33 @@ hints. Solution code only on explicit request (trigger phrases above).
 # Learning Progress
 
 Current Topic:
-- Vector stores: embedding chunks into Chroma and querying them (`rag.py`)
+- Model registry: one dict of interchangeable chat models behind LangChain's common interface (`models.py` — writing from scratch)
 
 Completed:
 - Phase 0: uv setup, Ollama models pulled (llama3.2:3b / qwen2.5:3b / gemma3:4b / nomic-embed-text), USE_OLLAMA bypass design
-- Concept: model registry pattern — one dict of interchangeable chat models behind LangChain's common interface (`models.py`, written by Claude pre-learning-mode; study it)
-- Concept: Documents, loaders, RecursiveCharacterTextSplitter (`ingestion.py`, written by Claude pre-learning-mode; study it)
 
 Mistakes I made:
 - (none logged yet)
 
 Concepts to revise:
-- Why chunk overlap exists; why retrieval must happen once and be shared across models for a fair comparison
+-
 
 Questions to ask tomorrow:
 -
 
 Resources:
 - LangChain concepts: https://python.langchain.com/docs/concepts/
+- LangChain chat models: https://python.langchain.com/docs/concepts/chat_models/
+- Document loaders: https://python.langchain.com/docs/concepts/document_loaders/
+- Text splitters: https://python.langchain.com/docs/concepts/text_splitters/
 - Chroma integration: https://python.langchain.com/docs/integrations/vectorstores/chroma/
 - LangGraph basics: https://langchain-ai.github.io/langgraph/concepts/low_level/
 
 Next milestone:
-- Working persisted RAG index: build, query with scores, clear — and `uv run reindex --rebuild` fully functional
+- `models.py` written from scratch and passing its own smoke test, then `ingestion.py`, then a working persisted RAG index (`rag.py`) with `uv run reindex --rebuild` fully functional
+
+Restart note (2026-07-15): models.py and ingestion.py were deleted — they were
+written by Claude before Learning Mode started. Rewriting both from scratch,
+this time user-authored with Claude teaching only. Prior commits (6ed9125,
+d5b0bb1) remain in git history for reference if needed, but are not the
+starting point going forward.
