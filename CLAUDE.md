@@ -82,10 +82,13 @@ Rules (general):
 ├── models.py           # registry: {name: chat_model} for providers whose key exists
 ├── graph.py            # LangGraph graph: retrieve → parallel model nodes → collect
 ├── prompts.py          # grounded system prompt + context formatting with [1][2] citations
+├── reindex.py          # CLI: `uv run reindex --clear/--rebuild` (index management)
 ├── chroma_db/          # persisted Chroma store (gitignored)
-├── requirements.txt
-├── .env.example        # optional cloud keys + optional OLLAMA_BASE_URL
-├── .gitignore          # must include .env and chroma_db/
+├── docs/               # source docs for `reindex --rebuild` (gitignored)
+├── pyproject.toml      # uv project + dependencies + reindex script entry
+├── requirements.txt    # mirror of deps for non-uv users
+├── .env.example        # USE_OLLAMA flag + dev model names + optional cloud keys
+├── .gitignore          # must include .env, chroma_db/, docs/
 └── README.md
 ```
 
@@ -145,33 +148,41 @@ API keys in `.env` instead.
 - Constants (CHUNK_SIZE, CHUNK_OVERLAP, TOP_K, model names) at the top of
   their modules.
 
-## How to Run
+## How to Run (uv)
+
+Dependencies are managed by **uv** via `pyproject.toml` (not pip/requirements).
 
 ```bash
 # 1. Ensure Ollama is running and models are pulled (see prerequisite above)
-python -m venv venv
-venv\Scripts\activate           # macOS/Linux: source venv/bin/activate
-pip install -r requirements.txt
+uv sync                         # create .venv and install everything
 cp .env.example .env            # optional: add cloud keys / OLLAMA_BASE_URL
-streamlit run app.py
+uv run streamlit run app.py     # launch the app
 ```
 
-## requirements.txt (target contents)
+## Custom command: reindex
 
+A small CLI (`reindex.py`, wired as a uv script in `pyproject.toml`) manages the
+Chroma index outside the UI:
+
+```bash
+uv run reindex --clear              # delete the persisted index
+uv run reindex --rebuild            # re-embed docs/ into a fresh index
+uv run reindex --clear --rebuild    # wipe then rebuild
 ```
-streamlit
-langchain
-langgraph
-langchain-ollama
-langchain-openai
-langchain-anthropic
-langchain-google-genai
-langchain-chroma
-langchain-community
-pypdf
-docx2txt
-python-dotenv
-```
+
+Why it matters: flipping `USE_OLLAMA` changes the embedding dimension
+(nomic-embed-text = 768 vs text-embedding-3-small = 1536), and a Chroma
+collection is tied to one dimension. After switching the flag you must
+`--clear --rebuild`. (`--rebuild` is scaffolded now and becomes active once
+ingestion.py + rag.py exist in Phase 2.)
+
+## Dependencies
+
+Declared in `pyproject.toml` `[project.dependencies]`: streamlit, langchain,
+langgraph, langchain-ollama, langchain-openai, langchain-anthropic,
+langchain-google-genai, langchain-chroma, langchain-community, pypdf, docx2txt,
+python-dotenv. (`requirements.txt` is kept only as a mirror for non-uv users;
+uv is the source of truth.)
 
 ## Testing / Verification
 

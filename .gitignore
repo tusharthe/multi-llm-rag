@@ -3,6 +3,10 @@
 
 # Persisted vector store (rebuilt from documents)
 store/
+chroma_db/
+
+# Local source documents for reindex --rebuild (not committed)
+docs/
 
 # Python
 __pycache__/
