@@ -1,10 +1,118 @@
-import chat_history as chat
+"""RAG Hub Pro -- Streamlit entry point.
+
+Owns the three things that must happen exactly once per script run:
+
+1. ``st.set_page_config`` (must be the first Streamlit call),
+2. the global stylesheet and the shared sidebar,
+3. the page registry + ``st.navigation`` router.
+
+Individual pages under ``app_pages/`` render only their own content -- they
+never set page config or build a sidebar. The directory is deliberately NOT
+called ``pages/``: that name triggers Streamlit's legacy auto-discovery, which
+would fight the explicit ``st.navigation`` registry below.
+"""
+
+from __future__ import annotations
+
 import streamlit as st
 
-from pages.sidebar import render_sidebar
+st.set_page_config(
+    page_title="RAG Hub Pro",
+    page_icon=":material/hub:",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 
-st.session_state.setdefault("current_chat_id", None)
+import chat_history as chat  # noqa: E402  (must follow set_page_config)
+from sidebar import render_sidebar  # noqa: E402
+from theme import inject_css  # noqa: E402
 
-st.set_page_config(page_title="RAG Hub Pro", layout="wide")
+# ---------------------------------------------------------------------------
+# Page registry. Keys are stable ids used by the sidebar for st.switch_page;
+# `position="hidden"` suppresses Streamlit's own nav so ours is the only one.
+# ---------------------------------------------------------------------------
 
-render_sidebar()
+PAGES = {
+    "chat": st.Page(
+        "app_pages/current_chat.py",
+        title="Current chat",
+        icon=":material/forum:",
+        url_path="chat",
+        default=True,
+    ),
+    "arena": st.Page(
+        "app_pages/arena.py",
+        title="Arena",
+        icon=":material/compare_arrows:",
+        url_path="arena",
+    ),
+    "history": st.Page(
+        "app_pages/history.py",
+        title="History",
+        icon=":material/history:",
+        url_path="history",
+    ),
+    "analytics": st.Page(
+        "app_pages/analytics.py",
+        title="Analytics",
+        icon=":material/bar_chart:",
+        url_path="analytics",
+    ),
+    "settings": st.Page(
+        "app_pages/settings.py",
+        title="Model settings",
+        icon=":material/tune:",
+        url_path="settings",
+    ),
+}
+
+
+def ensure_active_chat() -> None:
+    """Guarantee ``current_chat_id`` points at a chat that actually exists.
+
+    One code path covers three cases:
+
+    * fresh session -> open the most recently updated chat (``list_chats`` is
+      already sorted newest-first), so restarting the app resumes where the
+      user left off instead of stacking up empty records;
+    * stale id (the chat was deleted) -> fall back to the most recent one
+      rather than crashing on ``load_chat``;
+    * no chats at all -> create the first one.
+    """
+    chats = chat.list_chats()
+    known_ids = {item["chat_id"] for item in chats}
+
+    if st.session_state.get("current_chat_id") in known_ids:
+        return
+
+    if chats:
+        st.session_state["current_chat_id"] = chats[0]["chat_id"]
+    else:
+        st.session_state["current_chat_id"] = chat.new_chat()["chat_id"]
+
+
+def init_session_defaults() -> None:
+    """Seed session-level UI state (generation params are widget-backed)."""
+    st.session_state.setdefault("temperature", 0.7)
+    st.session_state.setdefault("top_p", 0.9)
+    st.session_state.setdefault("max_tokens", 512)
+    st.session_state.setdefault("chunk_size", 1000)
+    st.session_state.setdefault("top_k", 4)
+
+
+inject_css()
+init_session_defaults()
+ensure_active_chat()
+
+nav = st.navigation(list(PAGES.values()), position="hidden")
+
+# Titles are unique, so they identify the running page without relying on how
+# Streamlit rewrites the default page's url_path.
+active_key = next(
+    (key for key, page in PAGES.items() if page.title == nav.title),
+    "chat",
+)
+
+render_sidebar(PAGES, active_key)
+
+nav.run()

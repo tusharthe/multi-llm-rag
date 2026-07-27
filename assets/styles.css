@@ -1,0 +1,505 @@
+/* ==========================================================================
+   RAG Hub Pro - global stylesheet
+   Tokens mirror the Stitch design export (rag_hub_core/DESIGN.md).
+   Loaded once per run by theme.inject_css(), called from app.py.
+   ========================================================================== */
+
+/* No @font-face imports needed:
+   - Inter and Geist Mono come from .streamlit/config.toml (font / codeFont).
+   - "Material Symbols Rounded" is already bundled and loaded by Streamlit
+     itself, so the inline icon spans below reuse it instead of pulling a
+     second icon font off the network. */
+
+:root {
+    --surface: #fcf9f8;
+    --surface-lowest: #ffffff;
+    --surface-low: #f6f3f2;
+    --surface-container: #f0eded;
+    --surface-high: #eae7e7;
+    --surface-highest: #e5e2e1;
+    --on-surface: #1b1c1c;
+    --on-surface-variant: #5b403d;
+    --outline: #906f6c;
+    --outline-variant: #e4beb9;
+    --primary: #b7131a;
+    --primary-container: #db322f;
+    --primary-fixed: #ffdad6;
+    --on-primary-fixed-variant: #93000d;
+    --tertiary: #006578;
+    --success: #15803d;
+    --warning: #b45309;
+    --muted: #8a8686;
+    --border: #e5e2e1;
+
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --shadow-1: 0 1px 3px rgba(0, 0, 0, 0.04);
+    --shadow-2: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* -------------------------------------------------------------- shell --- */
+
+.material-symbols-outlined {
+    font-family: 'Material Symbols Rounded';
+    font-weight: normal;
+    font-style: normal;
+    line-height: 1;
+    vertical-align: middle;
+    font-feature-settings: 'liga';
+    -webkit-font-smoothing: antialiased;
+}
+
+header[data-testid="stHeader"] {
+    background: transparent;
+}
+
+/* st.navigation(position="hidden") already removes the auto nav; belt & braces. */
+[data-testid="stSidebarNav"] {
+    display: none !important;
+}
+
+[data-testid="stSidebarHeader"] {
+    padding-bottom: 0 !important;
+}
+
+[data-testid="stSidebarUserContent"] {
+    padding-top: 0.75rem !important;
+}
+
+/* Three-panel layout: fixed 280px sidebar per DESIGN.md. */
+section[data-testid="stSidebar"] {
+    width: 280px !important;
+    min-width: 280px !important;
+    max-width: 280px !important;
+}
+
+.block-container {
+    padding-top: 2.5rem;
+    padding-bottom: 4rem;
+    max-width: 1440px;
+}
+
+/* ---------------------------------------------------------- typography -- */
+
+.page-title {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    color: var(--on-surface);
+    margin: 0 0 4px 0;
+}
+
+.page-subtitle {
+    font-size: 14px;
+    color: var(--muted);
+    margin: 0 0 24px 0;
+}
+
+.section-label {
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 22px 0 10px 0;
+}
+
+.mono {
+    font-family: 'Geist Mono', monospace;
+    font-size: 13px;
+}
+
+/* -------------------------------------------------------------- cards --- */
+
+.card {
+    background: var(--surface-lowest);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 18px 20px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow-1);
+}
+
+.card-lg {
+    background: var(--surface-lowest);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    box-shadow: var(--shadow-1);
+}
+
+/* ------------------------------------------------------ pills & badges -- */
+/* Pill radius is reserved for status badges and model tags (DESIGN.md).    */
+
+.pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 9999px;
+    padding: 3px 10px;
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    background: var(--surface-container);
+    color: var(--on-surface-variant);
+    border: 1px solid var(--border);
+}
+
+.pill-success {
+    background: #e8f5ec;
+    color: var(--success);
+    border-color: #c9e7d3;
+}
+
+.pill-primary {
+    background: var(--primary-fixed);
+    color: var(--on-primary-fixed-variant);
+    border-color: var(--outline-variant);
+}
+
+.pill-muted {
+    background: var(--surface-container);
+    color: var(--muted);
+}
+
+.status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    display: inline-block;
+    background: var(--success);
+}
+
+.status-dot.warn {
+    background: var(--warning);
+}
+
+.status-dot.off {
+    background: var(--muted);
+}
+
+/* -------------------------------------------------------- chat bubbles -- */
+
+.msg-user {
+    background: #eef4fb;
+    border: 1px solid #d8e5f3;
+    border-radius: var(--radius-md);
+    padding: 14px 18px;
+    margin: 0 0 6px auto;
+    max-width: 82%;
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--on-surface);
+}
+
+.msg-ai {
+    background: var(--surface-lowest);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 18px 20px;
+    margin-bottom: 8px;
+    box-shadow: var(--shadow-1);
+    font-size: 15px;
+    line-height: 1.65;
+    color: var(--on-surface);
+}
+
+.msg-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--surface-high);
+}
+
+.file-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: var(--surface-container);
+    color: var(--on-surface-variant);
+    border: 1px solid var(--border);
+    border-radius: 9999px;
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    padding: 2px 9px;
+}
+
+/* -------------------------------------------------------- model avatar -- */
+
+.model-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.model-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--on-surface);
+    margin: 0;
+    line-height: 1.2;
+}
+
+.model-id {
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    margin: 2px 0 0 0;
+    line-height: 1;
+}
+
+/* --------------------------------------------------------- arena cards -- */
+
+.arena-card {
+    background: var(--surface-lowest);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px 18px;
+    box-shadow: var(--shadow-1);
+    min-height: 340px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Set only by a human clicking "Mark as preferred" -- never computed. */
+.arena-card.preferred {
+    border: 1.5px solid var(--primary);
+    box-shadow: var(--shadow-2);
+}
+
+.arena-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--surface-high);
+    margin-bottom: 14px;
+}
+
+.arena-body {
+    font-size: 13.5px;
+    line-height: 1.65;
+    color: var(--on-surface);
+    flex-grow: 1;
+}
+
+.arena-body p {
+    margin: 0 0 10px 0;
+}
+
+.arena-foot {
+    display: flex;
+    gap: 22px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--surface-high);
+}
+
+.foot-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.foot-lbl {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.foot-val {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--on-surface);
+}
+
+/* ------------------------------------------------------------ metrics --- */
+
+.metric-card {
+    background: var(--surface-lowest);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 18px 20px;
+    box-shadow: var(--shadow-1);
+    height: 100%;
+}
+
+.metric-label {
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+}
+
+.metric-value {
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--on-surface);
+    line-height: 1.1;
+}
+
+.metric-foot {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 6px;
+}
+
+.metric-foot.up {
+    color: var(--success);
+}
+
+.stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.stat-box {
+    background: var(--surface-low);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+}
+
+.stat-val {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--primary);
+    line-height: 1.2;
+}
+
+.stat-lbl {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 2px;
+}
+
+/* -------------------------------------------------------- history rows -- */
+
+.history-card {
+    background: var(--surface-lowest);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 16px 20px;
+    box-shadow: var(--shadow-1);
+}
+
+.history-card.active {
+    border: 1.5px solid var(--primary);
+}
+
+.history-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--on-surface);
+    margin: 0;
+}
+
+.history-meta {
+    display: flex;
+    gap: 16px;
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    margin: 8px 0 10px 0;
+}
+
+.history-excerpt {
+    font-size: 13.5px;
+    color: var(--on-surface-variant);
+    line-height: 1.55;
+    margin: 0;
+}
+
+/* -------------------------------------------------------- empty states -- */
+
+.empty-state {
+    border: 1px dashed var(--outline-variant);
+    border-radius: var(--radius-lg);
+    background: var(--surface-low);
+    padding: 40px 24px;
+    text-align: center;
+    color: var(--muted);
+}
+
+.empty-state .material-symbols-outlined {
+    font-size: 34px;
+    color: var(--outline-variant);
+}
+
+.empty-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--on-surface-variant);
+    margin: 10px 0 4px 0;
+}
+
+/* --------------------------------------------------- streamlit widgets -- */
+
+/* Sidebar nav: ghost buttons, left-aligned. */
+section[data-testid="stSidebar"] .stButton button {
+    justify-content: flex-start;
+    text-align: left;
+    font-weight: 500;
+    border-radius: 10px;
+}
+
+section[data-testid="stSidebar"] .stButton button[kind="tertiary"] {
+    color: var(--on-surface);
+    padding-left: 12px;
+}
+
+section[data-testid="stSidebar"] .stButton button[kind="tertiary"]:hover {
+    background: var(--surface-high);
+    color: var(--primary);
+}
+
+/* Active nav item / active chat row -- keyed with an `on_` prefix so a single
+   attribute selector can style whichever one is currently selected. */
+[class*="st-key-nav_on_"] button,
+[class*="st-key-chat_on_"] button {
+    background: var(--primary-fixed) !important;
+    color: var(--on-primary-fixed-variant) !important;
+    font-weight: 600 !important;
+    border-left: 3px solid var(--primary) !important;
+    border-radius: 0 10px 10px 0 !important;
+}
+
+/* Compact file uploader so it fits the 280px sidebar. */
+section[data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] {
+    padding: 10px 12px;
+    background: var(--surface-low);
+    border: 1px dashed var(--outline-variant);
+    border-radius: var(--radius-md);
+    min-height: unset;
+}
+
+section[data-testid="stSidebar"] [data-testid="stFileUploaderDropzoneInstructions"]>div>small {
+    display: none;
+}
+
+hr {
+    margin: 18px 0;
+    border-color: var(--surface-high);
+}

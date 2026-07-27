@@ -1,15 +1,42 @@
 [theme]
-# The primary accent color for interactive elements (buttons, sliders, links)
-primaryColor = "#e53935"
+# Tokens mirror the Stitch design export (rag_hub_core/DESIGN.md).
+base = "light"
 
-# The background color for the main content area
+primaryColor = "#b7131a"
 backgroundColor = "#fcf9f8"
+secondaryBackgroundColor = "#f0eded"
+textColor = "#1b1c1c"
+linkColor = "#006578"
+borderColor = "#e5e2e1"
+codeBackgroundColor = "#f6f3f2"
 
-# The background color for the sidebar and secondary containers
-secondaryBackgroundColor = "#f6f3f2"
+# Shape language: 12px base radius on cards/inputs/buttons.
+baseRadius = "12px"
+buttonRadius = "12px"
+showWidgetBorder = true
+showSidebarBorder = true
 
-# The main text color
-textColor = "#1c1b1b"
+# Inter for body/headings, Geist Mono for technical metadata.
+font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+headingFont = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@600;700;800&display=swap"
+codeFont = "'Geist Mono':https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&display=swap"
+baseFontSize = 15
+codeFontSize = "13px"
+headingFontSizes = ["32px", "24px", "18px", "16px", "14px", "12px"]
+headingFontWeights = [700, 600, 600, 600, 500, 500]
+linkUnderline = false
 
-# The font family (Inter is used in the design, Streamlit supports "sans serif")
-font = "sans serif"
+# Status colors used by st.badge and :green-badge[...] markdown.
+greenColor = "#15803d"
+orangeColor = "#b45309"
+redColor = "#b7131a"
+blueColor = "#006578"
+grayColor = "#8a8686"
+
+# Per-model series colors for the analytics charts.
+chartCategoricalColors = ["#10a37f", "#d97757", "#4285f4", "#b7131a", "#006578"]
+
+[theme.sidebar]
+backgroundColor = "#f6f3f2"
+secondaryBackgroundColor = "#eae7e7"
+borderColor = "#e5e2e1"
