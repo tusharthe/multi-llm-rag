@@ -77,25 +77,6 @@ Rules (general):
 - Keep it SIMPLE. No agents, no tools, no re-ranking, no streaming. The graph
   has exactly: retrieve → {openai, anthropic, gemini} in parallel → collect.
 
-## Project Structure
-
-```
-├── app.py              # Streamlit UI (only file that imports streamlit)
-├── ingestion.py        # load PDF/TXT/DOCX + split into chunks (LangChain loaders/splitter)
-├── rag.py              # embeddings + Chroma vector store: build_index(), get_retriever(), clear_index()
-├── models.py           # registry: {name: chat_model} for providers whose key exists
-├── graph.py            # LangGraph graph: retrieve → parallel model nodes → collect
-├── prompts.py          # grounded system prompt + context formatting with [1][2] citations
-├── reindex.py          # CLI: `uv run reindex --clear/--rebuild` (index management)
-├── chroma_db/          # persisted Chroma store (gitignored)
-├── docs/               # source docs for `reindex --rebuild` (gitignored)
-├── pyproject.toml      # uv project + dependencies + reindex script entry
-├── requirements.txt    # mirror of deps for non-uv users
-├── .env.example        # USE_OLLAMA flag + dev model names + optional cloud keys
-├── .gitignore          # must include .env, chroma_db/, docs/
-└── README.md
-```
-
 ## Prerequisite for local dev (USE_OLLAMA=true): Ollama with models pulled
 
 ```bash
@@ -109,14 +90,47 @@ ollama pull gemma3:4b           # Gemini slot stand-in
 For production (`USE_OLLAMA=false`) Ollama is not needed — set the three cloud
 API keys in `.env` instead.
 
+## Visual Design Reference
+
+UI target is a Stitch-generated mockup, exported to
+`C:\Users\tkpar\Downloads\stitch_rag_hub_ai_interface\stitch_rag_hub_ai_interface\`
+(4 screens as `code.html` + `screen.png` pairs, plus `rag_hub_core/DESIGN.md`
+with the full token spec). Adopt the visual language; do NOT adopt every
+screen 1:1 — some elements are out of scope, see below.
+
+- **Palette/type:** warm off-white surfaces (`#fcf9f8`), primary red
+  `#b7131a`/`#bb171c`, Inter for body/headings, Geist for labels/mono
+  metadata. Full token list in `DESIGN.md` front matter.
+- **Layout:** 3-panel — left sidebar 280px (nav + chat history + knowledge
+  source uploader), fluid center (chat/compare), right config panel 320px.
+  12px radius on cards/inputs/buttons, 16px on dashboard cards, pill radius
+  on status badges/model tags only.
+- **Screen → app mode mapping:**
+  - "Main Chat" screen → Continue mode (§8)
+  - "Multi-LLM Arena" screen → Compare mode (§7), MINUS the auto "WINNER"
+    badge — see §10 below, that part of the mockup is not what we're building.
+  - "Chat History" screen → the sidebar chat list (already required, §-none
+    specifically but implied by `chat_history.list_chats`)
+  - "Analytics Dashboard" screen → new, see §11 below.
+
 ## Core Requirements
 
 1. **Ingestion (Project 2):** multi-file Streamlit uploader for PDF/TXT/DOCX.
-   Use LangChain loaders (`PyPDFLoader`, `TextLoader`, `Docx2txtLoader`).
-   Per-file error handling — one bad file must not crash the batch.
-2. **Chunking:** `RecursiveCharacterTextSplitter`, `chunk_size=500`,
-   `chunk_overlap=100` (constants at top of `ingestion.py`). Each chunk keeps
-   metadata: source filename + chunk index.
+   Use LangChain loaders: **`PyMuPDFLoader`** for PDF (with
+   `extract_tables="markdown"` + `RapidOCRBlobParser` image OCR, so tabular /
+   scanned documents like medical reports are captured), `TextLoader` for
+   TXT/MD, `Docx2txtLoader` for DOCX. Per-file error handling — one bad file
+   must not crash the batch.
+2. **Chunking:** `RecursiveCharacterTextSplitter`, `chunk_size=1000`,
+   `chunk_overlap=200` (constants at top of `ingestion.py`; env-overridable —
+   these are the DEFAULTs). Larger chunks are deliberate — they keep
+   medical-report tables intact rather than splitting a row's label from its
+   value. Each chunk keeps metadata: source filename + chunk index.
+   The Model Config panel (§9) additionally lets the user override chunk size
+   PER CHAT at "Build Index" time — a per-chat BUILD-TIME parameter, not a
+   retrieval-time or per-query setting. Changing it after a chat's index
+   already exists requires "Clear Index" + rebuild, since chunks are baked
+   into the stored vectors, not adjustable retroactively.
 3. **Index:** embeddings into Chroma (OpenAI `text-embedding-3-small` in prod,
    Ollama `nomic-embed-text` in dev — same `USE_OLLAMA` switch), persisted to
    `./chroma_db/` so restarts don't re-embed. "Build Index" and "Clear Index"
@@ -133,13 +147,45 @@ API keys in `.env` instead.
    answer is not in the context say exactly "I could not find this in the
    uploaded documents." Sources section under the answers shows filename,
    chunk index, and chunk text per citation number.
-7. **Side-by-side UI (Project 1):** one column per model with the model's
-   answer. Under each column: a "Continue with <model>" button.
+7. **Side-by-side UI / "Arena" (Project 1):** one column per model with the
+   model's answer. Under each column: a "Continue with <model>" button. See
+   §10 for the manual preference marker.
 8. **Continue mode (Project 1):** after choosing a model, the app switches to
    a normal chat with ONLY that model. Each model keeps its **own** chat
-   history (`st.session_state`, keyed by model name). Follow-up questions
-   still do RAG retrieval for context. A "Back to compare" button returns to
-   side-by-side mode.
+   history, persisted per-chat in `chats/{chat_id}.json` via `chat_history.py`
+   (`histories: {model_label: [turn, ...]}` — NOT `st.session_state`, which
+   only holds the current `chat_id`; see `LEARNING.md` "Per-chat collection
+   architecture"). Follow-up questions still do RAG retrieval for context. A
+   "Back to compare" button returns to side-by-side mode.
+9. **Generation parameters (Model Config panel):** Temperature, Top-P, and Max
+   Tokens are user-adjustable via sidebar/config-panel sliders — one shared
+   set of generation params applied to whichever model(s) get called, threaded
+   through `models.get_models(temperature=..., top_p=..., max_tokens=...)`
+   (Top-P and Max Tokens are new params `make_chat` doesn't take yet — Max
+   Tokens already exists as `DEFAULT_NUM_PREDICT`/`max_tokens`, just not
+   user-adjustable; Top-P needs adding). These are session-level, not
+   persisted per chat (ephemeral like any other widget default). Chunk Size
+   lives here too but behaves differently — see §2, it's a per-chat
+   build-time value, not a live generation param.
+10. **Manual preference marking (Arena):** after a compare turn, the user may
+    click a "Mark as preferred" control on ONE answer column. This is a plain
+    per-turn flag persisted in that turn's `chat_history` record — NOT an
+    automated score, NOT LLM-as-judge, NOT a computed "winner." No ranking
+    logic of any kind decides it; only a human click does. (The Stitch mockup's
+    auto-assigned "WINNER" badge is explicitly NOT what we're building — see
+    "Out of Scope.")
+11. **Analytics dashboard (new page):** documents indexed, average latency,
+    total queries, daily request volume, model-usage split, and
+    top-queried-document stats — aggregated from lightweight per-turn
+    instrumentation: latency measured around each `llm.invoke` call in
+    `graph.py`, token counts read from each response's `usage_metadata` when
+    the provider populates it (OpenAI/Anthropic/Gemini do via LangChain's
+    standard usage metadata; Ollama may not — fall back to a placeholder like
+    "—", never crash on a missing field). Stats live in a small local
+    log/file the dashboard reads and aggregates — stays consistent with "no
+    database beyond Chroma's files" (a flat JSON/JSONL stats file is fine; an
+    actual DB engine is not). Exact stats-file shape and where it's written
+    from is a design decision for whoever implements it — not fixed here.
 
 ## Coding Conventions
 
@@ -182,11 +228,11 @@ ingestion.py + rag.py exist in Phase 2.)
 
 ## Dependencies
 
-Declared in `pyproject.toml` `[project.dependencies]`: streamlit, langchain,
-langgraph, langchain-ollama, langchain-openai, langchain-anthropic,
-langchain-google-genai, langchain-chroma, langchain-community, pypdf, docx2txt,
-python-dotenv. (`requirements.txt` is kept only as a mirror for non-uv users;
-uv is the source of truth.)
+Full list in `pyproject.toml`. `pymupdf` powers `PyMuPDFLoader`;
+`rapidocr-onnxruntime` powers `RapidOCRBlobParser` image OCR — both heavier
+than plain `pypdf`, the deliberate cost of table/scan fidelity.
+`requirements.txt` is kept only as a mirror for non-uv users; uv is the source
+of truth.
 
 ## Testing / Verification
 
@@ -203,11 +249,27 @@ uv is the source of truth.)
 - Remove one API key from `.env` → app still runs with the remaining models
   and shows a notice for the missing one.
 - No secrets in the repo: `.env` and `chroma_db/` gitignored.
+- Drag the Temperature/Top-P/Max Tokens sliders → next generation call
+  reflects the new values (check via `logger.debug` of the request, or by
+  observing answer variability at high temperature).
+- Change Chunk Size before "Build Index" on a chat with no index yet → new
+  chunks reflect the override; changing it on an ALREADY-built chat should
+  require "Clear Index" first (no silent partial-rebuild).
+- Click "Mark as preferred" on one Arena column → persists in that turn's
+  chat_history record; reloading the chat (or restarting the app) still shows
+  the same preference. No other column's answer changes as a result.
+- After a few turns across a couple of chats, open the Analytics Dashboard →
+  document/query counts and latency reflect real activity, not mockup
+  placeholders. A provider that omits `usage_metadata` (e.g. Ollama) shows a
+  placeholder instead of crashing the page.
 
 ## Out of Scope (keep it simple)
 
 - No agents, tool-calling, or MCP.
 - No streaming responses, no async UI tricks beyond the LangGraph fan-out.
 - No re-ranking, hybrid search, or query rewriting.
-- No answer-quality judging/scoring between models — the human is the judge.
+- No AUTOMATED answer-quality judging/scoring between models (no LLM-as-judge,
+  no heuristic ranking, no computed "winner"). The human is the judge — the
+  app only records which answer a human clicked as preferred (§10), it never
+  decides that on its own.
 - No authentication, no multi-user support, no database beyond Chroma's files.

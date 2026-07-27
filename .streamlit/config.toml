@@ -1,0 +1,15 @@
+[theme]
+# The primary accent color for interactive elements (buttons, sliders, links)
+primaryColor = "#e53935"
+
+# The background color for the main content area
+backgroundColor = "#fcf9f8"
+
+# The background color for the sidebar and secondary containers
+secondaryBackgroundColor = "#f6f3f2"
+
+# The main text color
+textColor = "#1c1b1b"
+
+# The font family (Inter is used in the design, Streamlit supports "sans serif")
+font = "sans serif"

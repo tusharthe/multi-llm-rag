@@ -47,16 +47,190 @@ hints. Solution code only on explicit request (trigger phrases above).
 # Learning Progress
 
 Current Topic:
-- Model registry: one dict of interchangeable chat models behind LangChain's common interface (`models.py` — writing from scratch)
+- `logger.py` DONE (2026-07-25): shared `logging` logger (Laravel-style), UTF-8
+  daily-rotating file in `logs/` (fixes Windows cp1252 crash structurally),
+  `LOG_LEVEL` from `.env`, `propagate=False` + handler guard (Streamlit-safe),
+  `daily_namer` → `logger-YYYY-MM-DD.log` (must be deterministic: `backupCount`
+  re-runs it to find files to prune). All debug `print()`s across rag/graph/
+  ingestion converted to level-appropriate `logger` calls; banner logs collapsed
+  to one labelled record per event (parallel threads interleave). `logs/`
+  gitignored.
+- Backend refactor for per-chat collections DONE (2026-07-25): see
+  "Per-chat collection architecture" under Concepts to revise. `rag.py`
+  `COLLECTION_NAME="documents"` restored (kept only as the value the reindex
+  CLI passes on purpose) and `clear_index` deletes one collection via
+  `vector_store.delete_collection()`.
+- `chat_history.py` DONE (2026-07-26): per-chat JSON persistence
+  (`chats/{chat_id}.json`). `generate_chat_id`/`collection_name`/`chat_paths`/
+  `build_empty_record`/`save_chat`/`new_chat`/`load_chat`/`list_chats`/
+  `rename_chat`/`set_active_model`/`add_file_to_chat`/`delete_chat` plus the
+  two turn-recording functions, all reviewed line-by-line. Turn schema locked:
+  `histories: {model_label: [{role, content, created_at(isoformat)}, ...]}` —
+  the SAME user-turn dict is duplicated into every model's own list (not
+  stored once globally) because "Continue with `<model>`" replays only that
+  model's list as self-contained context.
+  - `record_compare_turn` / `record_continue_turn` both converged on
+    `histories.setdefault(model, []).extend([...])` — the one safe pattern
+    for "get-or-create a list value in a dict, then add to it."
+  - Bugs caught in review (see Mistakes below): (1) first draft overwrote
+    `histories` wholesale each turn — no append; (2) working draft forgot to
+    call `save_chat` at all, so `record_compare_turn` mutated only the
+    in-memory dict, nothing hit disk; (3) `record_continue_turn` draft mixed
+    `dict.get(key, [])` (does NOT insert into the dict) with
+    `dict.setdefault(key, []).append(data)`, which for an EXISTING key
+    appended the list to itself — a circular reference that crashes
+    `json.dumps` inside `save_chat`; (4) turn timestamps briefly used
+    `strftime("%Y%m%d_%H%M%S")` while the record's top-level `created_at`/
+    `updated_at` used `.isoformat()` — same field name, two formats, and the
+    strftime version had no sub-second resolution (collision risk for two
+    turns in the same second). Settled on `.isoformat()` everywhere.
+  - Left as-is, not urgent: dead commented-out `append_message` block
+    (~line 139) superseded by the two real recording functions; open design
+    question of whether `record_continue_turn` setting `record["active_model"]
+    = model` should instead delegate to the existing `set_active_model`
+    helper, or stay self-contained as a safety net.
+- Design scope EXPANDED (2026-07-26): a Stitch-generated mockup (exported to
+  `Downloads/stitch_rag_hub_ai_interface/`, tokens in its `DESIGN.md`) is now
+  the visual target — see "Visual Design Reference" in CLAUDE.md. Two
+  decisions made explicit there: (1) Arena's auto "WINNER" badge → REJECTED,
+  replaced with a human-clicked "mark preferred" flag (CLAUDE.md §10); (2) the
+  mockup's Analytics Dashboard + Model Config panel (Temperature/Top-P/Max
+  Tokens/Chunk Size) → ACCEPTED as new scope (CLAUDE.md §9, §11). CLAUDE.md's
+  Out-of-Scope list and Testing/Verification section were updated to match —
+  read CLAUDE.md directly for the current requirements, don't rely on this
+  log entry once the checklist below is done and superseded.
+- NEXT: `app.py` — Streamlit UI. Checklist (expanded from the original
+  4-stage plan to match the design decisions above):
+  1. Chat shell — sidebar from `list_chats()`, "New chat" button, session
+     state holds only `current_chat_id` (everything else — active_model,
+     histories, files — is re-read from the chat's JSON record via
+     `load_chat`, not duplicated into `st.session_state`).
+  2. Ingestion — per-chat `st.file_uploader`, save into that chat's
+     `docs_dir` (`chat_paths(chat_id)["docs_dir"]`), `ingestion.load_and_split`
+     per file wrapped in try/except (one bad file must not kill the batch),
+     `rag.build_index(chunks, collection_name=chat_history.collection_name(chat_id))`,
+     `add_file_to_chat` per filename, "Clear Index" → `rag.clear_index`. Chunk
+     Size override (CLAUDE.md §2) belongs here — a per-chat build-time value,
+     passed into `load_and_split`, not a live/retrieval-time setting.
+  3. Compare mode / "Arena" (shown when `record["active_model"] is None`) —
+     question input, `graph.invoke({"query": q, "collection": collection_name})`,
+     `st.columns` (one per model in the returned `answers` dict), a
+     "Continue with `<model>`" button per column → `set_active_model` +
+     `st.rerun()`, a "Mark as preferred" control per column (CLAUDE.md §10 —
+     plain flag on the turn record, no scoring logic), a Sources panel from
+     `final_state["docs"]`, then `record_compare_turn`.
+  4. Continue mode (shown when `active_model` is set) — replay
+     `histories[active_model]` with `st.chat_message`, `st.chat_input` for
+     follow-ups, still retrieves per CLAUDE.md #8 but only calls the ONE
+     active model (open question: reuse the LangGraph `graph`, which is
+     built for parallel fan-out, or call `rag.get_retriever` +
+     `prompts.format_context` + one model directly for the single-model
+     case?), `record_continue_turn`, "Back to compare" button →
+     `set_active_model(chat_id, None)`.
+  5. Model Config panel (CLAUDE.md §9) — Temperature/Top-P/Max Tokens
+     sliders, session-level (not persisted per chat). Needs `models.py`
+     changes first: `make_chat`/`get_models` don't take `top_p` yet, and
+     `max_tokens` isn't wired to a per-call override today (it's a module
+     constant `DEFAULT_NUM_PREDICT`).
+  6. Analytics dashboard (CLAUDE.md §11) — new page, needs instrumentation
+     added to `graph.py` (latency around `llm.invoke`, `usage_metadata` off
+     the response) and a small stats log to aggregate from. Biggest unknown:
+     exact stats-file shape isn't decided yet — deliberately left open in
+     CLAUDE.md for whoever implements it.
+  Build order still starts at (1)-(4) — (5)/(6) are additive and can come
+  after the core loop works end-to-end once.
+- `prompts.py` DONE (2026-07-23): SYSTEM_PROMPT (grounding + zero-hallucination + exact NOT_FOUND fallback) + NOT_FOUND constant + `format_context(docs) -> str` returning ONLY numbered `[1]…[k]` blocks (system prompt lives in graph.py as SystemMessage, not flattened here). Citation notation locked to plain `[1]` / `[1][3]` across block label, prompt rules, and future UI. Smoke test prints 4 numbered blocks.
+- `graph.py` DONE (2026-07-24): LangGraph retrieve → fan-out to per-model nodes (parallel super-step) → collect, VERIFIED end-to-end. Key wins: `answers: Annotated[Dict[str,str], operator.or_]` reducer merges parallel writes (no clobber); nodes return ONLY their delta `{"answers": {label: answer}}` (never `**state`); dynamic node build by looping `get_models()` (any 1-3 subset, no KeyError); closure bound via `make_node(label)` factory to dodge late-binding bug; each node builds `[SystemMessage(SYSTEM_PROMPT), HumanMessage(format_context(docs)+query)]`; try/except INSIDE node isolates failures. retrieve stores RAW Documents (not formatted string) so Sources panel keeps metadata; format_context called ONCE (in run_model). Verified run: parallel answers merged, Gemini cited [1][2][3], others returned exact NOT_FOUND. GOTCHA: debug print() of PDF text crashes on Windows cp1252 console (● / zero-width space) — strip debug prints before app.py or streamlit node may crash.
+- NEXT: `app.py` — Streamlit UI (uploader → build/clear index → ask → 3 side-by-side columns from graph.invoke's answers dict → Sources panel from state docs → Continue-with-model chat).
+
+- `rag.py` DONE (2026-07-18): build_index / get_retriever / clear_index all verified end-to-end. Constants CHROMA_DIR, COLLECTION_NAME="documents", TOP_K=4. Smoke test clear→build→retrieve returns 4 distinct semantically-ranked chunks. Key lessons: reopening Chroma must re-pass embedding_function (folder stores vectors, not the embedder); collection_name/persist_directory are shared lookup keys that fail SILENTLY on mismatch; add_documents appends w/ random UUIDs so reruns duplicate → clear_index (guarded shutil.rmtree) is the reset; delete_collection vs rmtree trade-off (rmtree = dependency-free clean slate, kills orphans, survives USE_OLLAMA dim-flip).
+- `ingestion.py` source fix DONE: metadata["source"] = Path(path).name (overwrite loader's full-path key, NOT a parallel file_path key; .name keeps extension vs .stem). Verified: retrieval source collapsed from full path to clean filename.
+  - Small finish items STILL left: overlap default 255→200 (line 12), delete dead commented line 54, add docstrings + `-> list[Document]` hints, fix line 66 typo "ingrstion".
+  - rag.py tidy item: line 56 __main__ still discards the retriever result — capture + print it.
+- NEXT: `prompts.py` — grounded system prompt (answer ONLY from numbered chunks, cite [1][2], exact "I could not find this..." fallback) + context formatting.
 
 Completed:
 - Phase 0: uv setup, Ollama models pulled (llama3.2:3b / qwen2.5:3b / gemma3:4b / nomic-embed-text), USE_OLLAMA bypass design
+- `models.py` DONE (2026-07-16): dual-mode registry (`get_models` + `get_embeddings` + `make_chat` factory), USE_OLLAMA bool switch, per-slot availability gate (returns any 1-3 subset), all 7 code-review findings closed. Smoke test: invoke returns AIMessage, embeddings len 768, blanking a var drops that provider without crashing.
 
 Mistakes I made:
-- (none logged yet)
+- `X if c else f()` stores the class instead of an instance in the true branch — surfaced as `invoke() missing 'input'` (my arg became `self`). Fix: decompose into a `make_chat` helper with a plain if/else.
+- `return` inside a loop returns the first item, not a dict — need accumulator: init dict before loop, fill inside, return after.
+- Availability gate must SKIP an unavailable provider (`if needed:`), not `raise` — raising crashes the whole registry and hides the working models.
+- env vars are strings: `USE_OLLAMA is True` / `== 'true'` are fragile — normalize to a real bool once at the top.
+- Two mode-specific dict shapes (string vs tuple) can't share one loop; use one uniform tuple table.
+- `num_predict` is Ollama-only; cloud chat classes use `max_tokens` (and don't take `base_url`).
+- `dict.get(key, [])` returns the default WITHOUT inserting it into the dict — if `key` already exists you get a reference to the real stored list (mutating it mutates the dict), but if `key` is missing you get an orphan list that goes nowhere when you mutate it. `dict.setdefault(key, [])` is the version that inserts-if-missing AND returns the (now real) list either way — that's the one to reach for when the plan is "get-or-create then mutate."
+- Mixing the two in one function is worse than using either alone: `x = d.get(k, []); x.extend(...); d.setdefault(k, []).append(x)` — when `k` already existed, `x` and `d.setdefault(k, [])` are the SAME object, so `.append(x)` appends the list to itself, a circular reference. `json.dumps` (and anything else that walks the structure) crashes on that.
+- A function silently doing nothing (no exception, no error) is the hardest bug class to catch by reading output — `.get()` swallowing a missing key produced no crash, just data that never reached disk. When a save/persist function "works" in manual testing, check the file on disk, not just the return value in memory.
 
 Concepts to revise:
--
+
+### How vector retrieval actually searches (2026-07-25) — verified live
+
+Division of labour (only ONE part understands language):
+- **Embedding model** (`nomic-embed-text` in dev) — the ONLY component that
+  "knows" meaning. It converts text → 768 numbers. Its knowledge is frozen in
+  trained weights, applied TWICE with the SAME model: once per chunk at index
+  time, once per question at query time. There is NO synonym table or keyword
+  map anywhere in the project — "tools ≈ libraries" is baked into the geometry
+  (meaning became *position* in 768-D space, learned from billions of training
+  sentences where those phrases shared contexts).
+- **Chroma** — dumb arithmetic. Given two 768-number vectors it computes cosine
+  distance. It never sees words, has no dictionary, understands nothing. Hand it
+  random numbers and it measures those just as happily.
+- **The LLMs** — NOT in the search loop at all. They only see the final top-k
+  chunks as text, after retrieval already picked them.
+
+Mental model: *the embedder is a translator (meaning → coordinates); Chroma is a
+ruler (measures distance between coordinates). The ruler doesn't understand
+language — it doesn't need to, the translator already folded meaning into the
+numbers.*
+
+Vocabulary trap: in Chroma a **"Document" = one CHUNK**, not one file. Upload 4
+files → `load_and_split` makes many chunks (~1000 chars each) → ALL chunks live
+in ONE collection. Retrieval searches the whole chunk pool across all 4 files at
+once and returns the GLOBAL top-k=4 (could be 2 from file A, 1 from C, 1 from
+D) — never file-by-file. "Search all four documents" means "pick the 4 best
+matching pieces from all of them," NOT "read all four."
+
+Semantic search returns the NEAREST chunks, not the CORRECT ones — live proof:
+query "what tools are needed in the project" scored
+  0.644  "technologies and frameworks..."  (right meaning, ZERO shared words ✓)
+  0.597  "the project deadline is Friday"   (WRONG meaning, beat the answer!)
+  0.557  "required libraries: Streamlit..." (the correct answer, only 3rd)
+  0.308  "I ate a banana..."                (unrelated, far ✓)
+The distractor won because it shared the surface word "project". This is WHY
+"Project 2" can NOT act as a filter: the embedder squeezes the WHOLE sentence
+into one point, so "Project 2" is just one ingredient blended in — it can't be
+pulled back out as a hard rule. Fixing that needs metadata filtering /
+re-ranking / query rewriting — all deliberately OUT OF SCOPE (keep it simple).
+
+Parked lever (known, not acted on): `nomic-embed-text` was trained to expect
+task prefixes `search_query:` on questions and `search_document:` on chunks.
+LangChain's `OllamaEmbeddings` doesn't add them by default, which compresses the
+scores and lets distractors creep up. Adding prefixes is a cheap future
+retrieval-quality win, but it's an enhancement beyond the simple brief.
+
+### Per-chat collection architecture (decided 2026-07-25)
+- One CHAT = one Chroma **collection** (`collection_name="chat_<id>"`, shared
+  persist dir). Isolation is structural — other chats' collections are never
+  queried. Chosen over metadata filtering (one forgotten `where=` leaks another
+  chat's docs) and over per-persist-directory (wasteful).
+- `rag.py` now threads `collection_name` through `build_index`/`get_retriever`/
+  `clear_index`; `graph.py` carries `collection` in `RetrievalState` and
+  `retrieve` passes it to `get_retriever` (but does NOT echo it back in the
+  delta — read-only keys stay out of the return).
+- `clear_index` must delete ONE collection (`vector_store.delete_collection()`,
+  the public method — NOT `.client`, which doesn't exist; the private attr is
+  `._client`). It must NEVER `rmtree` the whole store — that's `reindex --clear`
+  only. Two jobs, two blast radii.
+- Chat-id / collection-name rules (Chroma-enforced, seen live): 3–512 chars,
+  only `[a-zA-Z0-9._-]`, must START and END alphanumeric. `chat_20260725_a3f9b1`
+  is safe; leading/trailing `_` (e.g. `__attrcheck__`) is REJECTED.
+- `reindex.py` uses `glob` (top-level of docs/ only, NOT `rglob`) so it never
+  merges per-chat subfolders into the default collection; it re-adds the
+  `build_index(chunks, collection_name=COLLECTION_NAME)` call.
 
 Questions to ask tomorrow:
 -

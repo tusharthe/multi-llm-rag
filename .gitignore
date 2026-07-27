@@ -8,6 +8,9 @@ chroma_db/
 # Local source documents for reindex --rebuild (not committed)
 docs/
 
+# Log files — contain document text, prompts and model responses
+logs/
+
 # Python
 __pycache__/
 *.pyc

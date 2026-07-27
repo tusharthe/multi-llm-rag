@@ -12,8 +12,15 @@ Chroma ties a collection to one dimension, so the index must be cleared and
 rebuilt when you flip the switch. This command makes that a one-liner instead
 of clicking through the Streamlit UI.
 
-NOTE: --rebuild is scaffolded but not yet functional. It becomes active once
-ingestion.py and rag.py exist (Phase 2). Until then it prints a clear notice.
+--rebuild loads every supported file sitting DIRECTLY in docs/ (not in chat
+subfolders) through ingestion.load_and_split (load + normalize + chunk) and
+embeds the chunks via rag.build_index into the single default collection.
+
+Scope note: with the Streamlit app, each chat owns its own docs/<chat_id>/
+folder and its own Chroma collection, and the UI manages those. This CLI is a
+developer convenience for the shared default collection only -- e.g. rebuilding
+after flipping USE_OLLAMA. It deliberately ignores per-chat subfolders so it
+never merges different chats' documents into one collection.
 """
 
 import argparse
@@ -37,33 +44,42 @@ def clear_index() -> None:
 
 
 def rebuild_index() -> None:
-    """Re-embed every document in docs/ into a fresh Chroma index.
+    """Re-embed supported documents in the top level of docs/ into the default collection.
 
-    Scaffold only: the real implementation will call ingestion + rag once those
-    modules exist. For now it explains what it will do and exits cleanly.
+    Files inside chat subfolders (docs/<chat_id>/) are intentionally skipped --
+    those belong to per-chat collections the UI manages, and merging them here
+    would break chat isolation.
     """
-    try:
-        # Deferred import: these modules do not exist yet (Phase 2). Importing
-        # here (not at top) keeps `--clear` working before the pipeline lands.
-        from ingestion import load_and_chunk  # noqa: F401
-        from rag import build_index  # noqa: F401
-    except ImportError:
+    # Deferred import (not at module top): ingestion pulls in heavy PDF/OCR
+    # libraries, so importing lazily keeps plain `--clear` fast and dependency-
+    # light. These modules now exist, so a real ImportError here is a genuine
+    # bug and is deliberately NOT swallowed.
+    from ingestion import load_and_split
+    from rag import build_index, COLLECTION_NAME
+
+    if not DOCS_DIR.exists() or not any(DOCS_DIR.iterdir()):
         print(
-            "Rebuild is not available yet.\n"
-            "It will re-embed documents from the docs/ folder once the "
-            "ingestion.py + rag.py pipeline is built (Phase 2).\n"
-            "For now, use the Streamlit app to build the index, or run "
-            "`uv run reindex --clear` to wipe it."
-        )
+            f"No documents found in {DOCS_DIR}. Add PDF/TXT/DOCX files first.")
         return
 
-    # --- Active once the pipeline exists (Phase 2 will finish this) ---
-    if not DOCS_DIR.exists() or not any(DOCS_DIR.iterdir()):
-        print(f"No documents found in {DOCS_DIR}. Add PDF/TXT/DOCX files first.")
+    # load_and_split works on ONE file; walk docs/ and accumulate all chunks.
+    # glob (not rglob): only files directly in docs/, so per-chat subfolders
+    # are ignored. Per-file try/except so one bad file cannot abort the rebuild.
+    supported_exts = (".txt", ".md", ".pdf", ".docx")
+    chunks = []
+    for path in sorted(DOCS_DIR.glob("*")):
+        if path.is_file() and path.suffix.lower() in supported_exts:
+            try:
+                chunks.extend(load_and_split(str(path)))
+            except Exception as e:
+                print(f"Skipped {path.name}: {e}")
+
+    if not chunks:
+        print(f"No supported documents (PDF/TXT/DOCX/MD) found in {DOCS_DIR}.")
         return
+
     print(f"Rebuilding index from {DOCS_DIR} ...")
-    chunks = load_and_chunk(DOCS_DIR)
-    build_index(chunks)
+    build_index(chunks, collection_name=COLLECTION_NAME)
     print(f"Rebuilt index with {len(chunks)} chunks.")
 
 
@@ -79,7 +95,7 @@ def main() -> None:
     parser.add_argument(
         "--rebuild",
         action="store_true",
-        help="Re-embed docs/ into a fresh index (Phase 2 - not yet active).",
+        help="Re-embed docs/ into a fresh index.",
     )
     args = parser.parse_args()
 

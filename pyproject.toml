@@ -16,6 +16,10 @@ dependencies = [
     "pypdf",
     "docx2txt",
     "python-dotenv",
+    "pymupdf>=1.28.0",
+    "rapidocr>=3.9.1",
+    "rapidocr-onnxruntime>=1.4.4",
+    "ftfy>=6.3.1",
 ]
 
 [project.scripts]
