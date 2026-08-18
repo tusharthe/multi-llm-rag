@@ -15,6 +15,7 @@ from typing import Any
 import streamlit as st
 
 import chat_history as chat
+from logger import logger
 from theme import icon
 
 #: (page key, label, material icon) -- page key matches the registry in app.py.
@@ -25,34 +26,6 @@ NAV_ITEMS = [
     ("analytics", "Analytics", "bar_chart"),
     ("settings", "Model settings", "tune"),
 ]
-
-MAX_SIDEBAR_CHATS = 8
-
-
-def _relative_time(iso_timestamp: str | None) -> str:
-    """Render an ISO timestamp as a short relative label ("2h ago")."""
-    if not iso_timestamp:
-        return "--"
-    try:
-        moment = datetime.fromisoformat(iso_timestamp)
-    except ValueError:
-        return "--"
-
-    seconds = int((datetime.now() - moment).total_seconds())
-    if seconds < 60:
-        return "just now"
-    if seconds < 3600:
-        return f"{seconds // 60}m ago"
-    if seconds < 86400:
-        return f"{seconds // 3600}h ago"
-    if seconds < 604800:
-        return f"{seconds // 86400}d ago"
-    return moment.strftime("%d %b")
-
-
-def _truncate(text: str | None, limit: int = 22) -> str:
-    text = (text or "New chat").strip()
-    return text if len(text) <= limit else text[: limit - 1] + "…"
 
 
 def _render_brand() -> None:
@@ -94,56 +67,31 @@ def _render_nav(pages: dict[str, Any], active_key: str) -> None:
             st.switch_page(pages[key])
 
 
-def _render_chat_list(pages: dict[str, Any]) -> None:
-    st.sidebar.html('<div class="section-label">Recent chats</div>')
-
-    try:
-        chats = chat.list_chats()
-    except Exception:
-        chats = []
-
-    if not chats:
-        st.sidebar.caption("No chats yet — start one above.")
-        return
-
-    current_id = st.session_state.get("current_chat_id")
-
-    for item in chats[:MAX_SIDEBAR_CHATS]:
-        chat_id = item["chat_id"]
-        state = "on" if chat_id == current_id else "off"
-        label = f"{_truncate(item.get('title'))}  ·  {_relative_time(item.get('updated_at'))}"
-
-        if st.sidebar.button(
-            label,
-            key=f"chat_{state}_{chat_id}",
-            type="tertiary",
-            width="stretch",
-        ):
-            st.session_state["current_chat_id"] = chat_id
-            st.switch_page(pages["chat"])
-
-    if len(chats) > MAX_SIDEBAR_CHATS:
-        if st.sidebar.button(
-            f"View all {len(chats)} chats",
-            key="chat_view_all",
-            icon=":material/more_horiz:",
-            type="tertiary",
-            width="stretch",
-        ):
-            st.switch_page(pages["history"])
-
-
-def _render_knowledge_source() -> list[Any]:
+def _render_knowledge_source() -> None:
     st.sidebar.html('<div class="section-label">Knowledge source</div>')
+
+    # Ensure uploader_key exists
+    if "uploader_key" not in st.session_state:
+        st.session_state.uploader_key = "uploader_0"
 
     uploads = st.sidebar.file_uploader(
         "Upload documents",
         type=["pdf", "txt", "md", "docx"],
         accept_multiple_files=True,
-        key="sidebar_uploader",
+        key=st.session_state.uploader_key,
         label_visibility="collapsed",
         help="PDF, TXT, MD or DOCX — indexed per chat.",
     )
+
+    def file_submit():
+        current_files = st.session_state.get(st.session_state.uploader_key)
+        if current_files:
+            st.session_state["upload_file_messages"] = chat.upload_file(
+                current_files, st.session_state["current_chat_id"])
+
+    def clear_submit():
+        current_num = int(st.session_state.uploader_key.split("_")[-1])
+        st.session_state.uploader_key = f"uploader_{current_num + 1}"
 
     build_col, clear_col = st.sidebar.columns(2)
     build_col.button(
@@ -153,7 +101,8 @@ def _render_knowledge_source() -> list[Any]:
         type="primary",
         width="stretch",
         disabled=not uploads,
-        help="Embed the staged files into this chat's Chroma collection.",
+        help="Embed the staged files into this chat's.",
+        on_click=file_submit,
     )
     clear_col.button(
         "Clear",
@@ -161,15 +110,18 @@ def _render_knowledge_source() -> list[Any]:
         icon=":material/delete_sweep:",
         type="secondary",
         width="stretch",
-        help="Drop this chat's collection. Required before changing chunk size.",
+        help="Just clear the input files from current uploader",
+        on_click=clear_submit,
     )
 
-    return uploads or []
+    _render_footer()
 
 
 def _render_footer() -> None:
-    # Placeholder counts -- wired to the real Chroma collection once indexing
-    # is connected to the UI.
+
+    docs_count = 0
+    chunks_count = 0
+
     st.sidebar.html(
         f"""
         <div style="margin-top:18px; padding-top:14px;
@@ -179,14 +131,14 @@ def _render_footer() -> None:
             </span>
             <div style="font-family:'Geist Mono',monospace; font-size:10px;
                         color:var(--muted); margin-top:8px;">
-                {icon("bolt", 12)} 0 docs &nbsp;·&nbsp; 0 chunks
+                {icon("bolt", 12)} {docs_count} docs &nbsp;·&nbsp; {chunks_count} chunks
             </div>
         </div>
         """
     )
 
 
-def render_sidebar(pages: dict[str, Any], active_key: str) -> list[Any]:
+def render_sidebar(pages: dict[str, Any], active_key: str) -> None:
     """Draw the full sidebar and return any files staged in the uploader.
 
     Args:
@@ -202,13 +154,18 @@ def render_sidebar(pages: dict[str, Any], active_key: str) -> list[Any]:
         type="primary",
         width="stretch",
     ):
-        record = chat.new_chat()
+        logger.info('New chat button clicked')
+        chat_id = st.session_state.get("current_chat_id")
+        record = chat.load_chat(chat_id)
+        record = record if chat.is_chat_empty(
+            record) else chat.new_chat()
+
         st.session_state["current_chat_id"] = record["chat_id"]
+        logger.info(record["title"])
+        logger.info(record["chat_id"])
         st.switch_page(pages["chat"])
 
     _render_nav(pages, active_key)
-    _render_chat_list(pages)
-    uploads = _render_knowledge_source()
-    _render_footer()
 
-    return uploads
+    if active_key in ("chat", "arena"):
+        _render_knowledge_source()

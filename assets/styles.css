@@ -477,8 +477,7 @@ section[data-testid="stSidebar"] .stButton button[kind="tertiary"]:hover {
 
 /* Active nav item / active chat row -- keyed with an `on_` prefix so a single
    attribute selector can style whichever one is currently selected. */
-[class*="st-key-nav_on_"] button,
-[class*="st-key-chat_on_"] button {
+[class*="st-key-nav_on_"] button {
     background: var(--primary-fixed) !important;
     color: var(--on-primary-fixed-variant) !important;
     font-weight: 600 !important;

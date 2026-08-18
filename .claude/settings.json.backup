@@ -1,0 +1,20 @@
+{
+  "env": {
+    "ANTHROPIC_BASE_URL": "https://openrouter.ai/api",
+    "ANTHROPIC_AUTH_TOKEN": "sk-or-v1-your-openrouter-key-here",
+    "ANTHROPIC_API_KEY": "",
+    "CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY": "1",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "moonshotai/kimi-k3",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "moonshotai/kimi-k3",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "moonshotai/kimi-k2.7-code",
+    "CLAUDE_CODE_SUBAGENT_MODEL": "moonshotai/kimi-k3"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(git init *)",
+      "Bash(git branch *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
+    ]
+  }
+}

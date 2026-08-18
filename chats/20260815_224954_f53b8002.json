@@ -1,0 +1,89 @@
+{
+  "chat_id": "20260815_224954_f53b8002",
+  "collection_name": "chat_20260815_224954_f53b8002",
+  "created_at": "2026-08-15T22:49:54.156834",
+  "updated_at": "2026-08-18T22:50:11.506901",
+  "title": "New chat",
+  "files": [
+    "CGHSRPA30741A5-C37A-4E14082026211819988.pdf"
+  ],
+  "active_model": "Gemini",
+  "histories": {
+    "Anthropic": [
+      {
+        "role": "user",
+        "content": "",
+        "created_at": "2026-08-15T23:13:41.978059"
+      },
+      {
+        "role": "assistant",
+        "content": "I could not find this in the uploaded documents.",
+        "created_at": "2026-08-15T23:13:41.978063"
+      },
+      {
+        "role": "user",
+        "content": "adaddada",
+        "created_at": "2026-08-15T23:14:23.637075"
+      },
+      {
+        "role": "assistant",
+        "content": null,
+        "created_at": "2026-08-15T23:14:23.637079"
+      },
+      {
+        "role": "user",
+        "content": "Find anything ?",
+        "created_at": "2026-08-15T23:14:42.254143"
+      },
+      {
+        "role": "assistant",
+        "content": "I could not find this in the uploaded documents.",
+        "created_at": "2026-08-15T23:14:42.254146"
+      }
+    ],
+    "Gemini": [
+      {
+        "role": "user",
+        "content": "",
+        "created_at": "2026-08-15T23:13:41.978066"
+      },
+      {
+        "role": "assistant",
+        "content": "Here's the information based on the provided context:\n\n1.  The warranty for the reflective sheeting is 5 years, applicable as per Rule 50 of CMVR 1989 [1][6].\n2.  It is unlawful to duplicate or alter the ‘THIRD REGISTRATION PLATE STICKER’ without authorization [7].\n3.  The authorized HSRP fitment center is not responsible for removing old number plates; the vehicle owner must do so beforehand [9].\n4.  For warranty or grievance related claims, you can contact +91-9818188721 [5].\n5.  HSRP affixation will only be initiated post updation of the mobile number in the VAHAN software [2].",
+        "created_at": "2026-08-15T23:13:41.978067"
+      },
+      {
+        "role": "user",
+        "content": "Asking only to Gemini anything found?",
+        "created_at": "2026-08-15T23:15:35.261827"
+      },
+      {
+        "role": "assistant",
+        "content": "Here’s what I found in the uploaded documents:\n\n*   HSRP affixation must be initiated after updating the mobile number in the VAHAN software [1].\n*   The appointment is scheduled for 22-08-2026 from 09:00 AM to 02:00 PM [2].\n*   You must bring the receipt and RC of the vehicle to the affixation center [3].\n*   The vehicle registration number is CG07BQ9924, and it is a petrol, non-transport LMV [2].\n*   The HSRP has a 5-year warranty on reflective sheeting, applicable as per Rule 50 of CMVR 1989 [6].\n*   It is unlawful to duplicate or alter the ‘THIRD REGISTRATION PLATE STICKER’ [7]. [7]\n*   The authorized fitment center is not responsible for removing the old number plate [9]. [9]",
+        "created_at": "2026-08-15T23:15:35.261830"
+      }
+    ],
+    "OpenAI": [
+      {
+        "role": "user",
+        "content": "",
+        "created_at": "2026-08-15T23:13:41.978068"
+      },
+      {
+        "role": "assistant",
+        "content": "I could not find this in the uploaded documents.",
+        "created_at": "2026-08-15T23:13:41.978069"
+      },
+      {
+        "role": "user",
+        "content": "Gemini",
+        "created_at": "2026-08-15T23:16:14.141659"
+      },
+      {
+        "role": "assistant",
+        "content": "I could not find this in the uploaded documents.",
+        "created_at": "2026-08-15T23:16:14.141663"
+      }
+    ]
+  }
+}

@@ -93,11 +93,7 @@ def ensure_active_chat() -> None:
 
 def init_session_defaults() -> None:
     """Seed session-level UI state (generation params are widget-backed)."""
-    st.session_state.setdefault("temperature", 0.7)
-    st.session_state.setdefault("top_p", 0.9)
-    st.session_state.setdefault("max_tokens", 512)
-    st.session_state.setdefault("chunk_size", 1000)
-    st.session_state.setdefault("top_k", 4)
+    st.session_state.setdefault("upload_file_messages", {})
 
 
 inject_css()

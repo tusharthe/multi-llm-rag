@@ -1,12 +1,13 @@
 from logger import logger
 import operator
-from typing import Annotated, TypedDict, List, Dict
+from typing import Annotated, TypedDict, List, Dict, Literal
 from langchain_core.documents import Document
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import StateGraph, START, END
 from models import get_models
 from prompts import SYSTEM_PROMPT, format_context
 from rag import get_retriever
+from functools import partial
 
 models = get_models()
 
@@ -16,6 +17,7 @@ class RetrievalState(TypedDict, total=False):
     docs: List[Document]        # retrieved context
     # Reducer: merge dicts when multiple nodes update `answers` in parallel
     answers: Annotated[Dict[str, str], operator.or_]
+    active_model: Literal["All", "OpenAI", "Anthropic", "Gemini", None]
     collection: str
 
 
@@ -78,6 +80,21 @@ def collect(state: RetrievalState) -> RetrievalState:
     return state
 
 
+def model_router(state: RetrievalState) -> list[str]:
+    active_model = state.get("active_model")
+
+    if not active_model or active_model == "All":
+        return [f"{k.lower()}_node" for k in models.keys()]
+
+    target_node = f"{active_model.lower()}_node"
+    all_valid_nodes = [f"{k.lower()}_node" for k in models.keys()]
+
+    if target_node in all_valid_nodes:
+        return [target_node]
+
+    return [END]
+
+
 builder = StateGraph(RetrievalState)
 
 builder.add_node("retrieve", retrieve)
@@ -87,18 +104,17 @@ builder.add_edge(START, "retrieve")
 
 for model_label in models.keys():
     # e.g. "OpenAI_node", "Anthropic_node", "Gemini_node"
-    node_name = f"{model_label}_node"
+    node_name = f"{model_label.lower()}_node"
 
-    def make_node(label: str):
-        def node_fn(state: RetrievalState) -> RetrievalState:
-            return run_model(state, label)
-        return node_fn
+    builder.add_node(
+        node_name,
+        lambda state, lbl=model_label: run_model(state, lbl)
+    )  # fan-out
 
-    model_node_fn = make_node(model_label)
+    builder.add_edge(node_name, "collect")   # Fan-in: all nodes end at collect
 
-    builder.add_node(node_name, model_node_fn)
-    builder.add_edge("retrieve", node_name)   # fan-out
-    builder.add_edge(node_name, "collect")    # fan-in
+# Conditional Fan-out directly via function
+builder.add_conditional_edges("retrieve", model_router)
 
 builder.add_edge("collect", END)
 

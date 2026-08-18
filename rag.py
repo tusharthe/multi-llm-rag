@@ -1,23 +1,18 @@
+
+if __name__ == "__main__":
+    from ingestion import load_and_split
+
 from langchain_chroma import Chroma
 from models import get_embeddings
-from ingestion import load_and_split
 from pathlib import Path
 from langchain_core.documents import Document
 from langchain_core.vectorstores import VectorStoreRetriever
-import shutil
 from logger import logger
+from config import config as cfg
 
 
 CHROMA_DIR = Path(__file__).parent / "chroma_db"
 DOCS_DIR = Path(__file__).parent / "docs"
-TOP_K = 4
-
-# The canonical collection used by the reindex CLI / offline dev. It is a value
-# callers pass ON PURPOSE (e.g. reindex.py), NOT a default for the functions
-# below: collection_name is REQUIRED everywhere, so a caller that forgets to
-# pass a chat's collection fails loudly (TypeError at the call site) instead of
-# silently reading/writing this shared collection and leaking docs across chats.
-COLLECTION_NAME = "documents"
 
 
 def build_index(chunks: list[Document], collection_name: str) -> Chroma:
@@ -46,7 +41,7 @@ def build_index(chunks: list[Document], collection_name: str) -> Chroma:
     return vector_store
 
 
-def get_retriever(collection_name: str, k: int = TOP_K) -> VectorStoreRetriever:
+def get_retriever(collection_name: str, k: int = cfg.top_k) -> VectorStoreRetriever:
     """Return a retriever backed by the Chroma vector store."""
     vector_store = Chroma(
         persist_directory=str(CHROMA_DIR),
@@ -75,8 +70,11 @@ def clear_index(collection_name: str) -> None:
 
 
 if __name__ == "__main__":
+
     pdf_path = str(DOCS_DIR / "IIT Patna AIML Project Guidelines (1) (1).pdf")
     clear_index('chat_test')
+
     chunks = load_and_split(pdf_path)
     build_index(chunks, "chat_test")
-    get_retriever("chat_test").invoke("What are the tools used in the project 2?")
+    get_retriever("chat_test").invoke(
+        "What are the tools used in the project 2?")

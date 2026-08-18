@@ -94,7 +94,8 @@ for item in chats:
     is_current = chat_id == current_id
 
     with st.container(border=True):
-        title_col, action_col = st.columns([3.4, 1], vertical_alignment="center")
+        title_col, action_col = st.columns(
+            [3.4, 1], vertical_alignment="center")
 
         with title_col:
             model = item.get("active_model")
@@ -123,27 +124,28 @@ for item in chats:
             )
 
         with action_col:
-            if st.button(
-                "Open",
-                key=f"open_{chat_id}",
-                icon=":material/arrow_forward:",
-                type="primary",
-                width="stretch",
-                disabled=is_current,
-            ):
-                st.session_state["current_chat_id"] = chat_id
-                st.switch_page("app_pages/current_chat.py")
+            with st.container(horizontal=True):
+                if st.button(
+                    "Open",
+                    key=f"open_{chat_id}",
+                    icon=":material/arrow_forward:",
+                    type="primary",
+                    width="stretch",
+                    disabled=is_current,
+                ):
+                    st.session_state["current_chat_id"] = chat_id
+                    st.switch_page("app_pages/current_chat.py")
 
-            if st.button(
-                "Delete",
-                key=f"delete_{chat_id}",
-                icon=":material/delete:",
-                width="stretch",
-            ):
-                # Deleting the open chat leaves current_chat_id dangling on
-                # purpose -- ensure_active_chat() in app.py re-resolves it to
-                # the next most recent chat on the following run.
-                chat.delete_chat(chat_id)
-                if is_current:
-                    st.session_state.pop("current_chat_id", None)
-                st.rerun()
+                if st.button(
+                    "Delete",
+                    key=f"delete_{chat_id}",
+                    icon=":material/delete:",
+                    width="stretch",
+                ):
+                    # Deleting the open chat leaves current_chat_id dangling on
+                    # purpose -- ensure_active_chat() in app.py re-resolves it to
+                    # the next most recent chat on the following run.
+                    chat.delete_chat(chat_id)
+                    if is_current:
+                        st.session_state.pop("current_chat_id", None)
+                    st.rerun()

@@ -1,18 +1,16 @@
 import logging
-import os
+
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
+from config import config as cfg
 
-from dotenv import load_dotenv
-
-load_dotenv()
 
 LOG_DIR = Path(__file__).parent / "logs"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 LOG_FILE = LOG_DIR / "logger.log"
 
-_level = getattr(logging, os.getenv("LOG_LEVEL", "INFO").upper(), None)
+_level = getattr(logging, cfg.log_level, None)
 LOG_LEVEL = _level if isinstance(_level, int) else logging.NOTSET
 
 

@@ -47,6 +47,113 @@ hints. Solution code only on explicit request (trigger phrases above).
 # Learning Progress
 
 Current Topic:
+- BACKEND WIRING, in progress (2026-08-16). Continue-mode (`app_pages/current_chat.py`)
+  is now calling `graph.py` end-to-end instead of sitting UI-only:
+  1. DONE — `graph.py` router fixed. `model_router` returns a plain list of
+     target node names (`["gemini_node"]` or all three); `add_conditional_edges`
+     is called in its 2-arg form (no branch-map dict). Earlier attempt to keep
+     a dict like `{"All": [...], "Gemini": "gemini_node"}` crashed with
+     `TypeError: unhashable type: 'list'` — a list can be a dict VALUE but
+     never a dict KEY, and the router was accidentally being asked to act as
+     both the key-picker and the fan-out list-builder at once.
+  2. DONE — `process_text()` in `current_chat.py` now branches Arena
+     (`active_model is None` -> `graph.invoke` with no `active_model` key ->
+     router fans out to all 3) vs Continue (`active_model` set -> passed into
+     `graph.invoke` -> router narrows to 1 node) instead of manually calling
+     `models.py`/`rag.py` from the UI layer. Decision: orchestration stays
+     centralized in `graph.py`; UI only ever calls `graph.invoke`.
+  3. DONE — empty/whitespace-only `prompt.text` no longer reaches
+     `process_text` (chat_input can return a truthy object with `.text == ""`
+     during a file-only submission — same gotcha logged below for
+     `ChatInputValue`).
+  4. DONE — `process_text` stale-variable bug fixed. The function now reads
+     `active_model = chat.get_active_model(chat_id)` ONCE, freshly, at call
+     time (line ~244) and branches on that value. The module-level
+     `active_model` global (page-render time) is only used for DISPLAY, never
+     for branching. Lesson re-confirmed: when two variables are "supposed to
+     mean the same thing", they will drift — fetch once, use that.
+  5. DONE — casing bug fixed. The answer-match loop now compares
+     `m.lower() == active_model.lower()`. Also added a `break` on match and a
+     post-loop `if ans is None: logger.warning(...)` guard — the first draft
+     put the warning in an `else` on the match (fired for every non-matching
+     model = false warnings); moved OUTSIDE the loop so it logs once only when
+     no model matched. Lesson: a "not found" check belongs after the search,
+     not as an `else` inside it. Debug `print()`s replaced with a single
+     `logger.debug("process_text | chat_id=%s active_model=%s", ...)`.
+  6. NOTED, not a code bug — `cudaMalloc failed: out of memory` from
+     `llama-server` (Ollama) is a VRAM capacity issue, not an app bug. Fix by
+     freeing GPU memory, using a smaller local model, or accepting CPU
+     fallback — see `AGENTS.md`.
+  7. REVIEWED (no changes yet) — `app_pages/arena.py` shell works (columns,
+     Mark/Continue buttons, Reset) but the chat_input still shows
+     "comparison graph is not wired up yet" — NO `graph.invoke` call. This is
+     the biggest remaining gap in the core loop: Arena displays past answers
+     but cannot generate new ones.
+  8. DESIGN DECISION (mark as preferred, CLAUDE.md §10) — settled on **Option C**:
+     stamp a shared `turn_id` (uuid hex) into EVERY dict written by
+     `record_compare_turn` (shared user turn + all assistant turns), and keep
+     a top-level `preferences: {turn_id: model_label}` dict in the chat record.
+     Rationale: "preferred" is a property of the turn, but the turn currently
+     has no identity of its own (`created_at` collides within the same second,
+     already logged as a mistake). `turn_id` gives stable per-turn identity.
+     Open sub-decisions for next session: (a) where `arena.py` gets the
+     `turn_id` at click-time (hold latest turn_id in session_state AND record);
+     (b) backward compat with old JSON lacking `turn_id`/`preferences` (fall
+     back to current `answers[-1]` reading, or accept no stars on old chats);
+     (c) unmarking semantics — `preferences.pop(turn_id)` vs strict one-per-turn.
+  NEXT SESSION: (1) wire Arena chat_input -> graph.invoke -> record_compare_turn
+  (needs `record_compare_turn` to RETURN the turn_id), then (2) implement
+  `mark_preferred` per Option C. Earlier open UI-polish items (History buttons,
+  scroll container, Export removal) remain pending underneath.
+
+  Previous topic (UI POLISH PASS, 2026-07-28) below — items 3/4/5 there
+  (History page button width, current_chat scroll container, Export button
+  removal) are still open and unblocked by this session's work.
+
+Previous Topic:
+- UI POLISH PASS, in progress (2026-07-28). The app_pages/ shell renders but is
+  not wired to the backend yet; before wiring, six layout/state fixes:
+  1. DONE — "Recent chats" removed from the sidebar (History page covers it).
+     `_render_chat_list`, `MAX_SIDEBAR_CHATS`, the now-dead `_relative_time` /
+     `_truncate` helpers and the `st-key-chat_on_` CSS rule all swept.
+  2. DONE — knowledge-source uploader gated on `active_key in ("chat","arena")`;
+     `render_sidebar` still returns `uploads` (`[]` on other pages).
+     `_render_footer()` moved INSIDE `_render_knowledge_source` so index status
+     only shows where indexing is possible.
+  3. TODO — History page Open/Delete buttons too wide (`history.py:126-142`).
+     They pass `width="stretch"`, but 1.60's button default is ALREADY
+     `"content"` — just drop the arg. `st.container(horizontal=True)` can put
+     them side by side without nesting more columns.
+  4. TODO — current_chat.py: middle column should scroll, sidebar + Model Config
+     stay put. Use `st.container(height=..., autoscroll=True)` around the
+     transcript loop; once the middle stops growing the page, the side panels
+     stay put on their own (no `position: sticky` needed). `height="stretch"`
+     needs a BOUNDED parent or it degrades to content height.
+  5. TODO — hide the Export button (`arena.py:52`, `current_chat.py:81`). Both
+     sit in an `st.columns(2)` split — collapse the split too, don't leave an
+     empty half.
+  6. DONE-ish — "New chat" no longer creates a blank record on every click.
+     Chose EMPTY-CHAT REUSE over true lazy creation: lazy creation would make
+     `current_chat_id = None` a real state that all four pages must tolerate,
+     for no visible benefit. REMAINING BUG: the emptiness test checks only
+     `record["histories"]`, not `record["files"]` — so a chat with documents
+     indexed but no question asked yet counts as "empty" and gets reused,
+     silently inheriting a populated Chroma collection into what looks like a
+     fresh chat. Also still open in sidebar.py: two `print()` calls that should
+     be `logger` (the whole reason logger.py exists), an unused
+     `from datetime import datetime`, a module docstring still advertising
+     "recent chats", and a Build help string clipped to "…into this chat's."
+- `st.chat_input(accept_file="multiple")` added to current_chat.py (2026-07-28)
+  — NOT yet wired, and it changed the return type from `str` to
+  `ChatInputValue`. Three consequences to handle when wiring: (a) pass
+  `prompt.text` to `record_continue_turn`, never the object — it is not
+  JSON-serialisable and `save_chat` would raise; (b) `if prompt:` now asks
+  "does this mapping have keys", not "did the user type something" — a
+  file-only submission is truthy with `prompt.text == ""`; (c) `prompt.files`
+  are `UploadedFile` objects, same in-memory-vs-path gap as the sidebar
+  uploader. OPEN DESIGN QUESTION: this is now a SECOND upload route alongside
+  the sidebar panel — do both ingest (then the handler must be one shared
+  function), or does one win?
 - `logger.py` DONE (2026-07-25): shared `logging` logger (Laravel-style), UTF-8
   daily-rotating file in `logs/` (fixes Windows cp1252 crash structurally),
   `LOG_LEVEL` from `.env`, `propagate=False` + handler guard (Streamlit-safe),
@@ -162,6 +269,26 @@ Mistakes I made:
 - `num_predict` is Ollama-only; cloud chat classes use `max_tokens` (and don't take `base_url`).
 - `dict.get(key, [])` returns the default WITHOUT inserting it into the dict — if `key` already exists you get a reference to the real stored list (mutating it mutates the dict), but if `key` is missing you get an orphan list that goes nowhere when you mutate it. `dict.setdefault(key, [])` is the version that inserts-if-missing AND returns the (now real) list either way — that's the one to reach for when the plan is "get-or-create then mutate."
 - Mixing the two in one function is worse than using either alone: `x = d.get(k, []); x.extend(...); d.setdefault(k, []).append(x)` — when `k` already existed, `x` and `d.setdefault(k, [])` are the SAME object, so `.append(x)` appends the list to itself, a circular reference. `json.dumps` (and anything else that walks the structure) crashes on that.
+- A ternary is easy to wire BACKWARDS precisely because it reads like English but
+  evaluates in a fixed order. Wrote `record = chat.new_chat() if not
+  record.get("histories") else record` meaning "reuse the empty chat" — it did the
+  exact opposite: clicking New chat on an empty chat spawned another blank one (the
+  bug being fixed), and clicking it on a chat WITH history kept you in that chat, so
+  a second chat could never be started. Defence: state the rule as a sentence first
+  ("reuse when empty, create when not"), then read the ternary against it. Runtime
+  test that catches it: click the button twice in a row and count the files.
+- "Is this record empty?" is a question about the WHOLE record, not the one field you
+  happened to look at. `histories` and `files` are two independent ways a chat becomes
+  non-empty, and the `files`-only case is the dangerous one — it leaves no trace in
+  the chat window, so a wrongly-reused chat looks fresh while sitting on a populated
+  Chroma collection.
+- A library object can be unsafe to `print`. `st.chat_input(accept_file=...)` returns
+  `ChatInputValue`, a `@dataclass` whose `__getattribute__` deliberately raises for
+  `audio` when `accept_audio=False` — but the generated `__repr__` touches every
+  field, so repr/str/print/st.write/logging all explode. Through `logging` it appears
+  as "Unable to print the message and arguments - possible formatting error", which
+  points at the format string and NOT at the real cause. Rule of thumb: when logging
+  blames formatting, suspect the OBJECT'S `__repr__`. Use `.to_dict()` / `.text`.
 - A function silently doing nothing (no exception, no error) is the hardest bug class to catch by reading output — `.get()` swallowing a missing key produced no crash, just data that never reached disk. When a save/persist function "works" in manual testing, check the file on disk, not just the return value in memory.
 
 Concepts to revise:

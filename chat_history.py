@@ -1,12 +1,17 @@
 from __future__ import annotations
-
-
+from typing import TYPE_CHECKING, TypedDict
 from datetime import datetime
 from pathlib import Path
 import json
 import shutil
 import uuid
-from typing import Any
+
+if TYPE_CHECKING:
+    from streamlit.runtime.uploaded_file_manager import UploadedFile
+
+from logger import logger
+from rag import build_index, clear_index
+from ingestion import load_and_split
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -44,6 +49,8 @@ def build_empty_record(chat_id: str, title: str = "New chat") -> dict[str, Any]:
         "title": title.strip() or "New chat",
         "files": [],
         "active_model": None,
+        "preferences": {},
+        # "preferences": dict[str, str],
         # histories: dict[label -> list[turn]]
         # histories: {
         #     "OpenAI":    [{role, content, created_at}, {role, content, created_at}, ...],
@@ -61,19 +68,19 @@ def build_empty_record(chat_id: str, title: str = "New chat") -> dict[str, Any]:
         #     "active_model": null,
         #     "histories": {
         #         "OpenAI": [
-        #             {"role": "user", "content": "List the two project names?",
+        #             {"role": "user", "content": "List the two project names?",  turn_id: "a1b2c3",
         #              "created_at": "2026-07-25T21:10:12.000000"},
         #             {"role": "assistant",
         #              "content": "According to the Retrieved Context, the two project names are:\n\n1. Project 2 [1]\n2. Project 1 [2]", "created_at": "2026-07-25T21:10:12.000000"}
         #         ],
         #         "Anthropic": [
-        #             {"role": "user", "content": "List the two project names?",
+        #             {"role": "user", "content": "List the two project names?",  turn_id: "a1b2c3",
         #              "created_at": "2026-07-25T21:10:12.000000"},
         #             {"role": "assistant",
         #              "content": "The two project names are [1] and [2].", "created_at": "2026-07-25T21:10:12.000000"}
         #         ],
         #         "Gemini": [
-        #             {"role": "user", "content": "List the two project names?",
+        #             {"role": "user", "content": "List the two project names?",  turn_id: "a1b2c3",
         #              "created_at": "2026-07-25T21:10:12.000000"},
         #             {"role": "assistant",
         #              "content": "The two project names are Project 2 [2] and Project 1 [2].", "created_at": "2026-07-25T21:10:12.000000"}
@@ -169,6 +176,7 @@ def record_continue_turn(chat_id, model, query, answer):
     }, {
         'role': 'assistant',
         'content': answer,
+        'turn_id': str(uuid.uuid4()),
         'created_at':  datetime.now().isoformat()
     }])
 
@@ -192,6 +200,11 @@ def set_active_model(chat_id: str, model: str | None) -> dict[str, Any]:
     return record
 
 
+def get_active_model(chat_id: str) -> str:
+    record = load_chat(chat_id)
+    return record["active_model"]
+
+
 def add_file_to_chat(chat_id: str, filename: str) -> dict[str, Any]:
     record = load_chat(chat_id)
     files = record.setdefault("files", [])
@@ -201,19 +214,107 @@ def add_file_to_chat(chat_id: str, filename: str) -> dict[str, Any]:
     return record
 
 
+def is_chat_empty(record: dict[str, Any]) -> bool:
+    return not record.get("histories") and not record.get("files")
+
+
+def _remove_partial_file(file_path: Path) -> None:
+    """Delete a half-written upload so disk and index don't drift apart."""
+    if not file_path.exists():
+        return
+
+    try:
+        file_path.unlink()
+    except OSError:
+        logger.warning(
+            "Failed to delete partial file '%s'", file_path, exc_info=True
+        )
+
+
+def _purge_chat_storage(chat_id: str) -> None:
+    """Remove a chat's vectors and its stored documents.
+
+    Shared by ``clear_chat_documents`` (keeps the conversation) and
+    ``delete_chat`` (removes it too).
+    """
+    clear_index(collection_name(chat_id))
+
+    docs_dir = chat_paths(chat_id)["docs_dir"]
+    if docs_dir.is_dir():
+        shutil.rmtree(docs_dir)
+
+
+def clear_chat_documents(chat_id: str) -> dict[str, Any]:
+    """Drop a chat's knowledge base but KEEP the conversation.
+
+    Resets ``files`` so ``upload_file`` -- which dedupes against the record --
+    will accept the same documents again.
+    """
+    _purge_chat_storage(chat_id)
+
+    record = load_chat(chat_id)
+    record["files"] = []
+    save_chat(record)
+    return record
+
+
 def delete_chat(chat_id: str) -> None:
-    paths = chat_paths(chat_id)
-    history_file = paths["history_file"]
-    docs_dir = paths["docs_dir"]
+    """Remove a chat entirely -- conversation, documents and vectors."""
+    _purge_chat_storage(chat_id)
+
+    history_file = chat_paths(chat_id)["history_file"]
     if history_file.exists():
         history_file.unlink()
 
-    if docs_dir.exists() and docs_dir.is_dir():
-        shutil.rmtree(docs_dir)
 
-    from rag import clear_index
+class FileUploadResult(TypedDict):
+    ok: bool
+    error: str | None
 
-    clear_index(collection_name(chat_id))
+
+def upload_file(uploaded_files: list[UploadedFile], chat_id: str) -> dict[str, FileUploadResult]:
+    logger.info("File upload started for chat_id=%s", chat_id)
+
+    upload_path = Path(chat_paths(chat_id)["docs_dir"])
+    upload_path.mkdir(parents=True, exist_ok=True)
+
+    known_names = set(load_chat(chat_id).get("files", []))
+
+    results: dict[str, FileUploadResult] = {}
+
+    for uploaded_file in uploaded_files:
+        original_name = uploaded_file.name
+
+        if original_name in known_names:
+            logger.info("Skipping duplicate file '%s'", original_name)
+            results[original_name] = {
+                "ok": False,
+                "error": f"'{original_name}' has already been uploaded.",
+            }
+            continue
+
+        file_path = upload_path / original_name
+
+        try:
+            file_path.write_bytes(uploaded_file.getbuffer())
+
+            chunks = load_and_split(file_path)
+            build_index(chunks, collection_name(chat_id))
+            add_file_to_chat(chat_id, original_name)
+
+            known_names.add(original_name)
+            results[original_name] = {"ok": True, "error": None}
+
+        except Exception:
+            logger.exception("Failed to upload file '%s'", original_name)
+            _remove_partial_file(file_path)
+            results[original_name] = {
+                "ok": False,
+                "error": f"Failed to upload '{original_name}'. Please try again."
+            }
+
+    logger.info("File upload end result: %s", results)
+    return results
 
 
 if __name__ == "__main__":

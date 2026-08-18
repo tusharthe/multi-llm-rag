@@ -1,5 +1,3 @@
-import os
-from dotenv import load_dotenv
 from langchain_community.document_loaders import TextLoader, PyMuPDFLoader, Docx2txtLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pathlib import Path
@@ -9,13 +7,7 @@ import re
 import unicodedata
 from ftfy import fix_text
 from logger import logger
-
-
-load_dotenv()
-
-
-CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "1000"))
-CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "200"))
+from config import config as cfg
 
 
 def load_file(path):
@@ -54,8 +46,8 @@ def load_and_split(path) -> list[Document]:
         d.metadata["normalization"] = "nfkc-rag-v1"
 
     splitter = RecursiveCharacterTextSplitter(
-        chunk_size=CHUNK_SIZE,
-        chunk_overlap=CHUNK_OVERLAP,
+        chunk_size=cfg.chunk_size,
+        chunk_overlap=cfg.chunk_overlap,
         separators=["\n\n", "\n", " ", ""],   # default
         length_function=len,
         add_start_index=True

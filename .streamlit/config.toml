@@ -40,3 +40,15 @@ chartCategoricalColors = ["#10a37f", "#d97757", "#4285f4", "#b7131a", "#006578"]
 backgroundColor = "#f6f3f2"
 secondaryBackgroundColor = "#eae7e7"
 borderColor = "#e5e2e1"
+
+
+[browser]
+gatherUsageStats = false
+
+
+[server]
+# Automatically re-runs the script when a file is modified on disk
+runOnSave = true
+
+# Options: "auto", "watchdog", "poll", or "none"
+fileWatcherType = "auto"

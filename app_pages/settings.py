@@ -13,6 +13,7 @@ import streamlit as st
 import chat_history as chat
 from components import page_header, section_label
 from theme import MODEL_IDS, avatar
+from config import config as cfg
 
 page_header("Model settings", "Providers, generation parameters and indexing.")
 
@@ -36,7 +37,7 @@ if config_error:
         icon=":material/error:",
     )
 else:
-    use_ollama = models.USE_OLLAMA
+    use_ollama = cfg.use_ollama
     st.caption(
         "Running against local Ollama stand-ins (`USE_OLLAMA=true`)."
         if use_ollama
@@ -66,9 +67,11 @@ else:
                 )
 
                 if available:
-                    st.badge("Configured", icon=":material/check:", color="green")
+                    st.badge("Configured", icon=":material/check:",
+                             color="green")
                 else:
-                    st.badge("Not configured", icon=":material/block:", color="gray")
+                    st.badge("Not configured",
+                             icon=":material/block:", color="gray")
 
                 st.caption(f"Backend: `{backend or 'unset'}`")
 

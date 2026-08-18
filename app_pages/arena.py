@@ -39,17 +39,29 @@ st.session_state.setdefault("preferred", {})
 
 # ------------------------------------------------------------------- header --
 
+upload_status_container = st.empty()
+if st.session_state["upload_file_messages"]:
+    results = st.session_state["upload_file_messages"]
+    for name, r in results.items():
+        if r["ok"]:
+            upload_status_container.success(f"Uploaded {name}")
+        else:
+            upload_status_container.error(
+                f"Failed to upload {name}: {r['error']}")
+    st.session_state["upload_file_messages"] = {}
+
 head_left, head_right = st.columns([2.6, 1], vertical_alignment="center")
 
 with head_left:
-    page_header("Arena", "Same question, same context, three models side by side.")
+    page_header(
+        "Arena", "Same question, same context, three models side by side.")
 
 with head_right:
-    act_a, act_b = st.columns(2)
-    if act_a.button("Reset", icon=":material/refresh:", width="stretch"):
+    # act_a = st.columns(1)
+    if st.button("Reset", icon=":material/refresh:", width="content"):
         st.session_state["preferred"] = {}
         st.rerun()
-    act_b.button("Export", icon=":material/download:", width="stretch")
+    # act_b.button("Export", icon=":material/download:", width="stretch")
 
 # --------------------------------------------------------- last asked prompt --
 
@@ -64,7 +76,8 @@ for turns in histories.values():
 
 if last_prompt:
     with st.container(border=True):
-        prompt_col, metric_a, metric_b = st.columns([3, 1, 1], vertical_alignment="center")
+        prompt_col, metric_a, metric_b = st.columns(
+            [3, 1, 1], vertical_alignment="center")
         prompt_col.html(
             f"""
             <div class="section-label" style="margin:0 0 6px 0;">Current prompt</div>
@@ -137,4 +150,5 @@ else:
 prompt = st.chat_input("Ask all models a question…")
 
 if prompt:
-    st.toast("The comparison graph is not wired up yet.", icon=":material/build:")
+    st.toast("The comparison graph is not wired up yet.",
+             icon=":material/build:")
