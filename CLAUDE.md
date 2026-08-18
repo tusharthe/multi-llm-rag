@@ -157,6 +157,13 @@ screen 1:1 — some elements are out of scope, see below.
    only holds the current `chat_id`; see `LEARNING.md` "Per-chat collection
    architecture"). Follow-up questions still do RAG retrieval for context. A
    "Back to compare" button returns to side-by-side mode.
+   **UX redesign agreed (2026-08-16, LEARNING.md item 12):** the chat view
+   renders a MERGED transcript — all models' turns grouped by `turn_id`,
+   user question once per group, each answer tagged with its model. Model
+   pills in the transcript are clickable to set `active_model` for the next
+   question ("All 3" routes back to compare). The "Compare" button re-runs
+   the last question across all 3 models ONLY if the last turn wasn't shared.
+   Storage stays per-model; only the view merges.
 9. **Generation parameters (Model Config panel):** Temperature, Top-P, and Max
    Tokens are user-adjustable via sidebar/config-panel sliders — one shared
    set of generation params applied to whichever model(s) get called, threaded

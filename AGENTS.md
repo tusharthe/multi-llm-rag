@@ -29,6 +29,12 @@
 - **Single-model "Continue" calls MUST go through `graph.py`**, not `models.py`/`rag.py` directly from `app_pages/*.py`. Pass `active_model` in the state dict passed to `graph.invoke(...)`; the router fans out to 1 node instead of 3. Keeps orchestration centralized — UI/page code should never call `models.get_models()` or `rag.get_retriever()` on its own.
 
 ## Known Open Bugs (as of last session)
-- `app_pages/arena.py` chat_input is NOT wired to the graph — `graph.invoke` is never called there; Arena displays past answers but cannot generate new ones.
-- "Mark as preferred" (§10) currently lives only in `st.session_state["preferred"]` (`arena.py:38,134`) — it dies on reload/restart. Design agreed: per-turn `turn_id` stamped in `record_compare_turn` + top-level `preferences: {turn_id: label}` dict; `record_compare_turn` must return the `turn_id`. See LEARNING.md item 8 for full design and open sub-decisions.
 - `current_chat.py` Continue-mode edge case: if `active_model` names a model absent from `models.keys()` at runtime, the router returns `[END]`, `answers` is empty, the `ans is None` guard fires and `None` is saved to history. Consider skipping `record_continue_turn` entirely when `ans is None`.
+- DONE (2026-08-16) — `record_compare_turn` now stamps ONE `turn_id` (uuid4, generated before the loop) into both the user and assistant dicts of every model; `preferences` dict initialized. Same pattern as `record_continue_turn`.
+
+## Agreed UX Redesign (in progress — see LEARNING.md item 12)
+- **Merged transcript:** current_chat renders ALL models' turns grouped by `turn_id` (user question ONCE per group), sorted by `created_at`, each answer tagged with its model. No more per-model timelines in the UI.
+- **Compare re-run:** "Compare" button re-answers the LAST question with all 3 models ONLY IF the last turn isn't shared (avoid wasted LLM calls); NO duplicate question — replace the single-model turn.
+- **Pill routing:** each answer's model pill is clickable → `set_active_model` = "next question voiced by X"; plus an "All 3" route back to compare. Arena becomes a pure compare-viewer.
+- **`active_model` semantics:** means "which model answers the NEXT chat question", not "which timeline to show".
+- Storage model UNCHANGED: `histories: {model: [turns]}` stays; only the VIEW merges.

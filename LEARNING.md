@@ -101,12 +101,65 @@ Current Topic:
      (b) backward compat with old JSON lacking `turn_id`/`preferences` (fall
      back to current `answers[-1]` reading, or accept no stars on old chats);
      (c) unmarking semantics — `preferences.pop(turn_id)` vs strict one-per-turn.
-  NEXT SESSION: (1) wire Arena chat_input -> graph.invoke -> record_compare_turn
+NEXT SESSION: (1) wire Arena chat_input -> graph.invoke -> record_compare_turn
   (needs `record_compare_turn` to RETURN the turn_id), then (2) implement
   `mark_preferred` per Option C. Earlier open UI-polish items (History buttons,
   scroll container, Export removal) remain pending underneath.
 
-  Previous topic (UI POLISH PASS, 2026-07-28) below — items 3/4/5 there
+Second topic (2026-08-16, after the above): Arena preference feature COMPLETE,
+then a MAJOR UX redesign was agreed. Full state of what happened:
+  9. DONE — Arena chat_input wired (`arena.py:159-165`): graph.invoke with no
+     `active_model` -> all 3 models -> record_compare_turn. The toast is gone.
+  10. DONE — preference UI in `arena.py`: `is_preferred = (pref == label)` where
+     `pref = preferences.get(turn_id)` (KEY = turn_id, VALUE = label — turn_id
+     is the shelf, label is what sits on it); toggle-off via `preferences.pop`;
+     "predates preference tracking" warning when `turn_id` is None; Reset wipes
+     `preferences = {}` AND saves. Old chats fall back gracefully via
+     `answers[-1].get("turn_id")`.
+  11. DONE — `record_compare_turn` (`chat_history.py:144`) now stamps ONE
+     `turn_id` (uuid4, generated BEFORE the loop) into BOTH the user and
+     assistant dicts of every model — same pattern as `record_continue_turn`.
+     The one-id-outside-the-loop placement is what makes all 3 models share
+     the value (an id generated inside the loop would give each model its own
+     id and break turn grouping). `preferences` dict initialized via
+     `record.setdefault`. Return value is still `record` — callers re-read
+     history after `st.rerun()`, so nothing needs the `turn_id` returned.
+  12. DESIGN DECISION — the three-timeline model (each model = own history,
+     Arena shows per-model last answer) was REJECTED as UX. Agreed redesign:
+     **one continuous merged conversation, multiple voices**.
+     a. MERGED TRANSCRIPT — current_chat renders ALL models' turns grouped by
+        turn_id, sorted by created_at; user question appears ONCE per group
+        (dedupe: compare turns duplicate the user turn 3x); each answer bubble
+        shows which model wrote it. Switching models = just "who answered next".
+     b. COMPARE RE-RUN — clicking "Compare" re-answers the LAST question with
+        all 3 models ONLY IF the last turn isn't shared (no wasted LLM calls).
+        Decided: NO duplicate — replace/remove the single-model turn so the
+        question appears once, with 3 answers.
+     c. PILL-ROUTING — each answer's model pill becomes clickable:
+        `set_active_model` = "next question voiced by X"; also an "All 3" route
+        to send the next question to compare mode. Arena becomes a pure
+        compare-viewer; routing happens from the transcript.
+     d. ACTIVE_MODEL stays meaningful as "which model answers the NEXT chat
+        question" — not "which timeline to show".
+  13. NOTED — Arena columns each read `answers[-1]` of their own history, so a
+     Gemini-only continue turn makes Arena show Gemini's newer answer next to
+     OpenAI/Anthropic's stale ones. Option B (find latest turn_id present in
+     ALL models) fixes the header/column misalignment; superseded by the
+     merged-transcript redesign + Compare re-run, which keeps things aligned
+     by construction. Revisit if misalignment resurfaces.
+  NEXT SESSION ORDER: (0) DONE — stamp turn_id in record_compare_turn,
+  (1) DONE — `group_turn_ids(record)` merged-transcript helper added to
+  `chat_history.py` (~line 95): one timeline across ALL models, grouped by
+  turn_id; each group = {turn_id, created_at, query, answers: {model: text}};
+  legacy chats (no turn_id) get a synthetic key
+  `legacy:{role}:{created_at}:{content}` so nothing crashes; sorted by
+  created_at (stable sort keeps insertion order on same-second ties).
+  (2) render merged transcript in current_chat.py (replace
+  `turns = histories.get(active_model, [])` at line 77), (3) pill routing +
+  "All 3", (4) Compare re-run with no-duplicate replacement. UI-polish
+  leftovers (History buttons, scroll, Export) still pending.
+
+  Previous topic (UI POLISH PASS, 2026-07-28) below �?" items 3/4/5 there
   (History page button width, current_chat scroll container, Export button
   removal) are still open and unblocked by this session's work.
 

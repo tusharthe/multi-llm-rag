@@ -1,4 +1,5 @@
 from __future__ import annotations
+from collections import defaultdict
 from typing import TYPE_CHECKING, TypedDict
 from datetime import datetime
 from pathlib import Path
@@ -50,7 +51,6 @@ def build_empty_record(chat_id: str, title: str = "New chat") -> dict[str, Any]:
         "files": [],
         "active_model": None,
         "preferences": {},
-        # "preferences": dict[str, str],
         # histories: dict[label -> list[turn]]
         # histories: {
         #     "OpenAI":    [{role, content, created_at}, {role, content, created_at}, ...],
@@ -63,6 +63,7 @@ def build_empty_record(chat_id: str, title: str = "New chat") -> dict[str, Any]:
         #     "collection_name": "chat_20260725_210704_b3446bd3",
         #     "created_at": "2026-07-25T21:07:04.000000",
         #     "updated_at": "2026-07-25T21:10:12.000000",
+        #     "preferences": dict[str, str],
         #     "title": "New chat",
         #     "files": ["IIT Patna AIML Project Guidelines (1) (1).pdf"],
         #     "active_model": null,
@@ -89,6 +90,49 @@ def build_empty_record(chat_id: str, title: str = "New chat") -> dict[str, Any]:
         # }
         "histories": {}
     }
+
+
+def group_turn_ids(record: dict[str, Any]) -> list[dict[str, Any]]:
+    """Merge all models' turns into ONE timeline, grouped by turn_id.
+
+    Returns a list of turn groups sorted by creation time. Each group:
+    {
+        "turn_id":  str,
+        "created_at": str (isoformat),
+        "query":    str | None,
+        "answers":  {model_label: answer_text},   # only models that answered
+    }
+
+    Old chats without ``turn_id`` fall back to per-item synthetic groups so
+    nothing crashes; new chats group perfectly by shared turn_id.
+    """
+    histories = record.get("histories", {})
+    groups: dict[str, dict[str, Any]] = {}
+
+    for model, turns in histories.items():
+        for item in turns:
+            turn_id = item.get("turn_id")
+            if turn_id is None:
+                turn_id = (
+                    f"legacy:{item['role']}:{item['created_at']}"
+                    f":{item['content']}"
+                )
+
+            group = groups.setdefault(turn_id, {
+                "turn_id": turn_id,
+                "created_at": item["created_at"],
+                "query": None,
+                "answers": {},
+            })
+
+            if item["role"] == "user":
+                group["query"] = item["content"]
+                if item["created_at"] < group["created_at"]:
+                    group["created_at"] = item["created_at"]
+            else:
+                group["answers"][model] = item["content"]
+
+    return sorted(groups.values(), key=lambda g: g["created_at"])
 
 
 def save_chat(record: dict[str, Any]) -> None:
@@ -149,34 +193,40 @@ def record_compare_turn(chat_id, query, answers):
     # }
     record = load_chat(chat_id)
     histories = record.get("histories", {})
+    turn_id = str(uuid.uuid4())
 
     for model, answer in answers.items():
         histories.setdefault(model, []).extend([{
             'role': 'user',
             'content': query,
+            'turn_id': turn_id,
             'created_at':  datetime.now().isoformat()
         }, {
             'role': 'assistant',
             'content': answer,
+            'turn_id': turn_id,
             'created_at':  datetime.now().isoformat()
         }])
 
     record["histories"] = histories
+    record.setdefault("preferences", {})
     save_chat(record)
     return record
 
 
 def record_continue_turn(chat_id, model, query, answer):
     record = load_chat(chat_id)
+    turn_id = str(uuid.uuid4())
     histories = record.get("histories", {})
     histories.setdefault(model, []).extend([{
         'role': 'user',
         'content': query,
+        'turn_id': turn_id,
         'created_at':  datetime.now().isoformat()
     }, {
         'role': 'assistant',
         'content': answer,
-        'turn_id': str(uuid.uuid4()),
+        'turn_id': turn_id,
         'created_at':  datetime.now().isoformat()
     }])
 

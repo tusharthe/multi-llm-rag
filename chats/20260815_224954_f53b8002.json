@@ -2,7 +2,7 @@
   "chat_id": "20260815_224954_f53b8002",
   "collection_name": "chat_20260815_224954_f53b8002",
   "created_at": "2026-08-15T22:49:54.156834",
-  "updated_at": "2026-08-18T22:50:11.506901",
+  "updated_at": "2026-08-18T23:42:29.571903",
   "title": "New chat",
   "files": [
     "CGHSRPA30741A5-C37A-4E14082026211819988.pdf"
@@ -61,6 +61,17 @@
         "role": "assistant",
         "content": "Here’s what I found in the uploaded documents:\n\n*   HSRP affixation must be initiated after updating the mobile number in the VAHAN software [1].\n*   The appointment is scheduled for 22-08-2026 from 09:00 AM to 02:00 PM [2].\n*   You must bring the receipt and RC of the vehicle to the affixation center [3].\n*   The vehicle registration number is CG07BQ9924, and it is a petrol, non-transport LMV [2].\n*   The HSRP has a 5-year warranty on reflective sheeting, applicable as per Rule 50 of CMVR 1989 [6].\n*   It is unlawful to duplicate or alter the ‘THIRD REGISTRATION PLATE STICKER’ [7]. [7]\n*   The authorized fitment center is not responsible for removing the old number plate [9]. [9]",
         "created_at": "2026-08-15T23:15:35.261830"
+      },
+      {
+        "role": "user",
+        "content": "Again search",
+        "created_at": "2026-08-18T23:42:29.571891"
+      },
+      {
+        "role": "assistant",
+        "content": "Here's the answer to your question, based solely on the provided text:\n\nThe authorized HSRP fitment center is located at Plot-03, Street-03, Panchsheel Sector-B, Borsi, Durg, Durghub, Plot No. B-3, Udya Soceity, Ring Road No. 2, Tatibandh, CHHATTISGARH, 491001, Near Hanuman MandirSector-4, Raipur, Chhattisgarh-492001 [3].  The appointment date and time is 22-08-2026 09:00 AM-02:00 PM [3]. [3]",
+        "turn_id": "454f6541-c809-4df8-a4b3-391c12731875",
+        "created_at": "2026-08-18T23:42:29.571898"
       }
     ],
     "OpenAI": [
@@ -85,5 +96,6 @@
         "created_at": "2026-08-15T23:16:14.141663"
       }
     ]
-  }
+  },
+  "preferences": {}
 }

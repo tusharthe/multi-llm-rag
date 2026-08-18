@@ -17,6 +17,7 @@ import streamlit as st
 
 import chat_history as chat
 from components import empty_state, model_header, page_header, section_label
+from graph import graph
 from theme import MODEL_IDS, icon
 
 #: Fixed columns. The academic deliverable is always OpenAI + Anthropic +
@@ -32,10 +33,7 @@ except FileNotFoundError:
     st.stop()
 
 histories = record.get("histories", {})
-
-# Preference marks live in session state until the persistence hook in
-# chat_history.record_compare_turn is added (CLAUDE.md section 10).
-st.session_state.setdefault("preferred", {})
+preferences = record.get('preferences', {})
 
 # ------------------------------------------------------------------- header --
 
@@ -59,7 +57,8 @@ with head_left:
 with head_right:
     # act_a = st.columns(1)
     if st.button("Reset", icon=":material/refresh:", width="content"):
-        st.session_state["preferred"] = {}
+        record['preferences'] = {}
+        chat.save_chat(record)
         st.rerun()
     # act_b.button("Export", icon=":material/download:", width="stretch")
 
@@ -105,7 +104,7 @@ else:
         turns = histories.get(label, [])
         answers = [t for t in turns if t["role"] == "assistant"]
         answer = answers[-1]["content"] if answers else None
-        is_preferred = st.session_state["preferred"].get(label, False)
+        turn_id = answers[-1].get("turn_id") if answers else None
 
         with column:
             with st.container(border=True):
@@ -119,6 +118,8 @@ else:
                 st.html('<div style="height:8px;"></div>')
 
                 mark_col, cont_col = st.columns(2)
+                pref = preferences.get(turn_id)
+                is_preferred = (pref == label)
 
                 # Human-only preference marker -- never computed by the app.
                 if mark_col.button(
@@ -130,8 +131,14 @@ else:
                     disabled=answer is None,
                     help="Record that you judged this answer best.",
                 ):
-                    # One preference per turn: marking a column clears the others.
-                    st.session_state["preferred"] = {label: not is_preferred}
+                    if turn_id is None:
+                        st.warning("This chat predates preference tracking.")
+                    elif is_preferred:
+                        preferences.pop(turn_id)
+                    else:
+                        preferences[turn_id] = label
+                    record['preferences'] = preferences
+                    chat.save_chat(record)
                     st.rerun()
 
                 if cont_col.button(
@@ -150,5 +157,9 @@ else:
 prompt = st.chat_input("Ask all models a question…")
 
 if prompt:
-    st.toast("The comparison graph is not wired up yet.",
-             icon=":material/build:")
+    if prompt.text and prompt.text.strip():
+        collection = chat.collection_name(chat_id)
+        final_state = graph.invoke(
+            {"query": prompt.text, "collection": collection})
+        chat.record_compare_turn(chat_id, prompt.text, final_state["answers"])
+    st.rerun()
