@@ -75,44 +75,84 @@ files = record.get("files", [])
 
 turn_groups = chat.group_turn_ids(record)
 
+# --- title editing state (per chat) ---
+if st.session_state.get("editing_chat_id") != chat_id:
+    st.session_state["editing_title"] = False
+    st.session_state["editing_chat_id"] = chat_id
+
 col_chat, col_config = st.columns([2.9, 1.1], gap="large")
 
 upload_status_container = None
 
 with col_chat:
 
-    chat_container = st.container(height=800, border=True,  key="my_chat_box")
+    chat_container = st.container(height=800, border=True, key="my_chat_box", autoscroll=True)
 
     with chat_container:
         head_left, head_right = st.columns(
             [2.4, 1], vertical_alignment="center")
 
         with head_left:
-            if active_model:
-                st.html(
-                    f"""
-                    <div style="display:flex; align-items:center; gap:12px;">
-                        {avatar(active_model)}
-                        <div>
-                            <div class="page-title" style="font-size:24px; margin:0;">
-                                {record.get("title", "New chat")}
-                            </div>
-                            <div style="font-family:'Geist Mono',monospace; font-size:11px;
-                                        color:var(--muted); margin-top:2px;">
-                                Next question → {active_model} ·
-                                {MODEL_IDS.get(active_model, "--")}
-                            </div>
-                        </div>
-                    </div>
-                    """
+            is_editing = st.session_state.get("editing_title", False)
+            if is_editing:
+                new_title_input = st.text_input(
+                    "Chat title",
+                    value=record.get("title", "New chat"),
+                    key="title_edit_input",
+                    label_visibility="collapsed",
+                    placeholder="Chat title",
                 )
+                b1, b2 = st.columns(2)
+                with b1:
+                    if st.button("Save", key="save_title", type="primary", width="stretch", icon=":material/check:"):
+                        clean = new_title_input.strip() or "New chat"
+                        chat.rename_chat(chat_id, clean)
+                        st.session_state["editing_title"] = False
+                        st.rerun()
+                with b2:
+                    if st.button("Cancel", key="cancel_title", width="stretch", icon=":material/close:"):
+                        st.session_state["editing_title"] = False
+                        st.rerun()
+                if active_model:
+                    st.html(
+                        f'<div style="font-family:\'Geist Mono\',monospace; font-size:11px; color:var(--muted); margin-top:6px;">Next question → {active_model} · {MODEL_IDS.get(active_model, "--")}</div>'
+                    )
+                else:
+                    st.html(
+                        '<div class="page-subtitle" style="margin-bottom:0;">Next question → All 3 models (comparison).</div>'
+                    )
             else:
-                st.html(
-                    f'<div class="page-title" style="font-size:24px;">'
-                    f'{record.get("title", "New chat")}</div>'
-                    '<div class="page-subtitle" style="margin-bottom:0;">'
-                    "Next question → All 3 models (comparison).</div>"
-                )
+                t_col, e_col = st.columns([5, 1], vertical_alignment="center")
+                with t_col:
+                    if active_model:
+                        st.html(
+                            f"""
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                {avatar(active_model)}
+                                <div>
+                                    <div class="page-title" style="font-size:24px; margin:0;">
+                                        {record.get("title", "New chat")}
+                                    </div>
+                                    <div style="font-family:'Geist Mono',monospace; font-size:11px;
+                                                color:var(--muted); margin-top:2px;">
+                                        Next question → {active_model} ·
+                                        {MODEL_IDS.get(active_model, "--")}
+                                    </div>
+                                </div>
+                            </div>
+                            """
+                        )
+                    else:
+                        st.html(
+                            f'<div class="page-title" style="font-size:24px;">'
+                            f'{record.get("title", "New chat")}</div>'
+                            '<div class="page-subtitle" style="margin-bottom:0;">'
+                            "Next question → All 3 models (comparison).</div>"
+                        )
+                with e_col:
+                    if st.button("", icon=":material/edit:", key="edit_title_btn", help="Edit chat title", width="content", type="tertiary"):
+                        st.session_state["editing_title"] = True
+                        st.rerun()
 
         with head_right:
             if st.button(
@@ -330,7 +370,16 @@ if prompt:
         else:
             if prompt.text and prompt.text.strip():
                 process_text(prompt.text, chat_id)
-        st.rerun()
+        # Auto-rename: first user message becomes the title (one time)
+    try:
+        fresh = chat.load_chat(chat_id)
+        if fresh.get("title", "New chat") == "New chat" and prompt.text and prompt.text.strip():
+            clean = prompt.text.strip().replace("\n", " ")[:50].strip()
+            if clean:
+                chat.rename_chat(chat_id, clean)
+    except Exception:
+        pass
+    st.rerun()
 
         # st.toast("Retrieval and generation are not wired up yet.",
         #          icon=":material/build:")

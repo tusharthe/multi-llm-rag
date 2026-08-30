@@ -178,4 +178,13 @@ if prompt:
         chat.record_compare_turn(
             chat_id, prompt.text, final_state["answers"],
             docs=final_state.get("docs"))
+        # Auto-rename on first message (one time)
+        try:
+            fresh = chat.load_chat(chat_id)
+            if fresh.get("title", "New chat") == "New chat":
+                clean = prompt.text.strip().replace("\n", " ")[:50].strip()
+                if clean:
+                    chat.rename_chat(chat_id, clean)
+        except Exception:
+            pass
     st.rerun()
