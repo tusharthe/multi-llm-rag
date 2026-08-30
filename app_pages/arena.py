@@ -161,6 +161,7 @@ else:
 
 # -------------------------------------------------------------------- input --
 
+thinking_placeholder = st.empty()
 prompt = st.chat_input(
     "Ask all models a question…",
     accept_file="multiple",
@@ -172,12 +173,17 @@ if prompt:
         st.session_state["upload_file_messages"] = chat.upload_file(
             prompt.files, chat_id)
     if prompt.text and prompt.text.strip():
-        collection = chat.collection_name(chat_id)
-        final_state = graph.invoke(
-            {"query": prompt.text, "collection": collection})
-        chat.record_compare_turn(
-            chat_id, prompt.text, final_state["answers"],
-            docs=final_state.get("docs"))
+        with thinking_placeholder:
+            with st.status("Thinking with all 3 models…  retrieving + generating in parallel", expanded=True) as status:
+                st.write("Retrieving relevant chunks from your documents…")
+                collection = chat.collection_name(chat_id)
+                final_state = graph.invoke(
+                    {"query": prompt.text, "collection": collection})
+                st.write(f"Generating answers ({len(final_state.get('answers', {}))} models)…")
+                chat.record_compare_turn(
+                    chat_id, prompt.text, final_state["answers"],
+                    docs=final_state.get("docs"))
+                status.update(label="Answer ready", state="complete", expanded=False)
         # Auto-rename on first message (one time)
         try:
             fresh = chat.load_chat(chat_id)

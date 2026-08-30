@@ -277,6 +277,7 @@ with col_chat:
                 chat.set_active_model(chat_id, None)
                 st.rerun()
 
+        thinking_placeholder = st.empty()
         prompt = st.chat_input(
             "Ask a question about your documents…",
             accept_audio=False,
@@ -337,48 +338,54 @@ def process_text(text: str, chat_id: str):
                  chat_id, active_model)
     collection = chat.collection_name(chat_id)
 
-    if active_model is None:
-        final_state = graph.invoke({"query": text, "collection": collection})
-        chat.record_compare_turn(
-            chat_id, text, final_state["answers"], docs=final_state.get("docs"))
-    else:
-        final_state = graph.invoke({
-            "query": text, "collection": collection, "active_model": active_model,
-        })
-        ans = None
-        for m, a in final_state["answers"].items():
-            if m.lower() == active_model.lower():
-                ans = a
-                break
+    # Thinking indicator: mirrors a typical LLM chat (retrieval + generation)
+    thinking_label = f"Thinking with {active_model}…" if active_model else "Thinking with all 3 models…  retrieving + generating in parallel"
+    with st.status(thinking_label, expanded=True) as status:
+        st.write("Retrieving relevant chunks from your documents…")
+        if active_model is None:
+            final_state = graph.invoke({"query": text, "collection": collection})
+            st.write(f"Generating answers ({len(final_state.get('answers', {}))} models)…")
+            chat.record_compare_turn(
+                chat_id, text, final_state["answers"], docs=final_state.get("docs"))
+        else:
+            st.write(f"Generating answer with {active_model}…")
+            final_state = graph.invoke({
+                "query": text, "collection": collection, "active_model": active_model,
+            })
+            ans = None
+            for m, a in final_state["answers"].items():
+                if m.lower() == active_model.lower():
+                    ans = a
+                    break
 
-        if ans is None:
-            logger.warning("No answer found for model %s", active_model)
+            if ans is None:
+                logger.warning("No answer found for model %s", active_model)
 
-        chat.record_continue_turn(
-            chat_id, active_model, text, ans, docs=final_state.get("docs"))
+            chat.record_continue_turn(
+                chat_id, active_model, text, ans, docs=final_state.get("docs"))
+        status.update(label="Answer ready", state="complete", expanded=False)
 
     return final_state["answers"]
 
 
 if prompt:
-    with st.chat_message("user"):
-        if prompt.files:
-            st.session_state["upload_file_messages"] = chat.upload_file(
-                prompt.files, chat_id)
-            if prompt.text and prompt.text.strip():
-                process_text(prompt.text, chat_id)
-        else:
-            if prompt.text and prompt.text.strip():
-                process_text(prompt.text, chat_id)
+    if prompt.files:
+        st.session_state["upload_file_messages"] = chat.upload_file(
+            prompt.files, chat_id)
+    if prompt.text and prompt.text.strip():
+        # Show thinking indicator in the placeholder above the input (so it
+        # appears inside the transcript, not below the page like arena)
+        with thinking_placeholder:
+            process_text(prompt.text, chat_id)
         # Auto-rename: first user message becomes the title (one time)
-    try:
-        fresh = chat.load_chat(chat_id)
-        if fresh.get("title", "New chat") == "New chat" and prompt.text and prompt.text.strip():
-            clean = prompt.text.strip().replace("\n", " ")[:50].strip()
-            if clean:
-                chat.rename_chat(chat_id, clean)
-    except Exception:
-        pass
+        try:
+            fresh = chat.load_chat(chat_id)
+            if fresh.get("title", "New chat") == "New chat":
+                clean = prompt.text.strip().replace("\n", " ")[:50].strip()
+                if clean:
+                    chat.rename_chat(chat_id, clean)
+        except Exception:
+            pass
     st.rerun()
 
         # st.toast("Retrieval and generation are not wired up yet.",
