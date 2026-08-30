@@ -30,11 +30,12 @@
 
 ## Known Open Bugs (as of last session)
 - `current_chat.py` Continue-mode edge case: if `active_model` names a model absent from `models.keys()` at runtime, the router returns `[END]`, `answers` is empty, the `ans is None` guard fires and `None` is saved to history. Consider skipping `record_continue_turn` entirely when `ans is None`.
-- DONE (2026-08-16) — `record_compare_turn` now stamps ONE `turn_id` (uuid4, generated before the loop) into both the user and assistant dicts of every model; `preferences` dict initialized. Same pattern as `record_continue_turn`.
 
-## Agreed UX Redesign (in progress — see LEARNING.md item 12)
-- **Merged transcript:** current_chat renders ALL models' turns grouped by `turn_id` (user question ONCE per group), sorted by `created_at`, each answer tagged with its model. No more per-model timelines in the UI.
-- **Compare re-run:** "Compare" button re-answers the LAST question with all 3 models ONLY IF the last turn isn't shared (avoid wasted LLM calls); NO duplicate question — replace the single-model turn.
-- **Pill routing:** each answer's model pill is clickable → `set_active_model` = "next question voiced by X"; plus an "All 3" route back to compare. Arena becomes a pure compare-viewer.
+## Agreed UX Redesign — COMPLETE (see LEARNING.md items 12, 14-17)
+- **Merged transcript:** `current_chat.py` renders `chat.group_turn_ids(record)` — user question ONCE per group, each answer with its model pill. Header shows "Next → {model} / All 3". Turns stat uses `len(turn_groups)`. Pill buttons (`route_{turn_id}_{model}`) set `active_model` for NEXT question; All 3 button sets `None`.
+- **Sources:** `prompts.format_sources(docs)` stored as `sources` on the user turn; threaded via `record_*` `docs` param and carried in `group_turn_ids` groups; one "Retrieved context" expander per turn.
+- **Compare re-run:** `current_chat.py` Compare button checks last group shared (`expected=MODEL_LABELS ⊆ answers.keys()`); if not shared re-runs `graph.invoke` with all 3, calls `chat.delete_turn` to avoid duplicate, then `record_compare_turn` with `docs`.
+- **Arena pure viewer:** `arena.py` now uses `group_turn_ids` → `last_shared` (latest turn where all 3 answered); shows aligned comparison only. Input now accepts files and passes `docs`.
+- **Helpers:** `chat.delete_turn(chat_id, turn_id)` removes turn from all models + `preferences[turn_id]`. `group_turn_ids` legacy fallback uses synthetic `legacy:{role}:{created_at}:{content}` key.
 - **`active_model` semantics:** means "which model answers the NEXT chat question", not "which timeline to show".
 - Storage model UNCHANGED: `histories: {model: [turns]}` stays; only the VIEW merges.

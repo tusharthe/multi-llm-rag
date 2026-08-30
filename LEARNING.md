@@ -147,17 +147,36 @@ then a MAJOR UX redesign was agreed. Full state of what happened:
      ALL models) fixes the header/column misalignment; superseded by the
      merged-transcript redesign + Compare re-run, which keeps things aligned
      by construction. Revisit if misalignment resurfaces.
-  NEXT SESSION ORDER: (0) DONE — stamp turn_id in record_compare_turn,
-  (1) DONE — `group_turn_ids(record)` merged-transcript helper added to
-  `chat_history.py` (~line 95): one timeline across ALL models, grouped by
-  turn_id; each group = {turn_id, created_at, query, answers: {model: text}};
-  legacy chats (no turn_id) get a synthetic key
-  `legacy:{role}:{created_at}:{content}` so nothing crashes; sorted by
-  created_at (stable sort keeps insertion order on same-second ties).
-  (2) render merged transcript in current_chat.py (replace
-  `turns = histories.get(active_model, [])` at line 77), (3) pill routing +
-  "All 3", (4) Compare re-run with no-duplicate replacement. UI-polish
-  leftovers (History buttons, scroll, Export) still pending.
+  14. DONE — `prompts.format_sources` + `record_*` now thread `docs` through:
+     `final_state["docs"]` from `graph.invoke` → `record_compare_turn(..., docs=...)`
+     / `record_continue_turn(..., docs=...)` → stored as `sources` on the user
+     turn; `group_turn_ids` carries `sources` per group; renderer shows one
+     "Retrieved context" expander per turn (group) — same `docs` for all models
+     so one expander, not three. Numbering `[1]` etc mirrors `format_context`.
+  15. DONE — merged transcript rendered in `current_chat.py`: `turn_groups =
+     chat.group_turn_ids(record)` replaces `turns = histories.get(active_model,[])`;
+     header now "Next question → {model} / All 3 models"; Turns stat uses
+     `len(turn_groups)`; user bubble from `group["query"]`, one answer bubble
+     per `group["answers"]` entry with correct `model` pill (trap: not
+     `active_model`); `else`-inside-`if` bug fixed — answers loop is outside
+     the query check; `answer["content"]` crash fixed — `answer` is already a str.
+  16. DONE — pill routing + All 3: each answer bubble has a `Use {model}` button
+     (`key=f"route_{turn_id}_{model}"`, unique per turn) → `set_active_model`
+     + `st.rerun()`; routing bar above the input shows `Next → {model|All 3}`
+     and an `All 3` button (sets `active_model=None`); `is_active` disables the
+     current model's button. No `switch_page` — routing stays in the chat.
+  17. DONE — smart Compare + Arena pure viewer: `chat.delete_turn(chat_id, turn_id)`
+     added (removes turn from all models + clears `preferences[turn_id]`);
+     `current_chat.py` Compare button now: if last group not shared
+     (`expected=MODEL_LABELS` not subset of `answers.keys()` and query exists)
+     → `delete_turn(last_turn_id)` + `record_compare_turn(last_query, all-3)`
+     (no duplicate question, same query appears once with 3 answers); `arena.py`
+     input now accepts files + passes `docs`; answer columns now use
+     `group_turn_ids` → `last_shared` (latest turn where all 3 answered) — so
+     Arena always shows an aligned comparison, not a stale mixed view.
+  NEXT: UI-polish leftovers (History buttons, scroll container, Export) still
+  pending; Analytics Dashboard (§11) not started; Model Config → backend plumbing
+  (§9) pending.
 
   Previous topic (UI POLISH PASS, 2026-07-28) below �?" items 3/4/5 there
   (History page button width, current_chat scroll container, Export button

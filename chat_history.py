@@ -138,6 +138,28 @@ def group_turn_ids(record: dict[str, Any]) -> list[dict[str, Any]]:
     return sorted(groups.values(), key=lambda g: g["created_at"])
 
 
+def delete_turn(chat_id: str, turn_id: str) -> dict[str, Any]:
+    """Remove a single turn (all dicts with this turn_id) from every model.
+
+    Used by the Compare re-run: the last single-model turn is replaced by a
+    fresh all-model turn so the question does not appear duplicated.
+    Also clears ``preferences[turn_id]`` if present.
+    """
+    record = load_chat(chat_id)
+    histories = record.get("histories", {})
+    for model in list(histories.keys()):
+        histories[model] = [
+            t for t in histories[model] if t.get("turn_id") != turn_id
+        ]
+    record["histories"] = histories
+    prefs = record.get("preferences")
+    if isinstance(prefs, dict) and turn_id in prefs:
+        del prefs[turn_id]
+        record["preferences"] = prefs
+    save_chat(record)
+    return record
+
+
 def save_chat(record: dict[str, Any]) -> None:
     record["updated_at"] = datetime.now().isoformat()
     paths = chat_paths(record["chat_id"])

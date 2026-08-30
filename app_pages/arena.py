@@ -91,20 +91,29 @@ st.html('<div style="height:18px;"></div>')
 
 # ------------------------------------------------------------ answer columns --
 
-if not histories:
+# Pure compare-viewer: show the latest turn that all models answered.
+turn_groups = chat.group_turn_ids(record)
+expected = set(MODEL_LABELS)
+last_shared = None
+for g in reversed(turn_groups):
+    if expected.issubset(set(g["answers"].keys())):
+        last_shared = g
+        break
+
+if not turn_groups or last_shared is None:
     empty_state(
         "compare_arrows",
         "No comparison yet",
         "Ask a question below to see all three models answer it side by side.",
     )
 else:
+    turn_id = last_shared["turn_id"]
+    pref = preferences.get(turn_id)
     columns = st.columns(len(MODEL_LABELS), gap="medium")
 
     for column, label in zip(columns, MODEL_LABELS):
-        turns = histories.get(label, [])
-        answers = [t for t in turns if t["role"] == "assistant"]
-        answer = answers[-1]["content"] if answers else None
-        turn_id = answers[-1].get("turn_id") if answers else None
+        answer = last_shared["answers"].get(label)
+        is_preferred = (pref == label)
 
         with column:
             with st.container(border=True):
@@ -118,8 +127,6 @@ else:
                 st.html('<div style="height:8px;"></div>')
 
                 mark_col, cont_col = st.columns(2)
-                pref = preferences.get(turn_id)
-                is_preferred = (pref == label)
 
                 # Human-only preference marker -- never computed by the app.
                 if mark_col.button(
@@ -154,12 +161,21 @@ else:
 
 # -------------------------------------------------------------------- input --
 
-prompt = st.chat_input("Ask all models a question…")
+prompt = st.chat_input(
+    "Ask all models a question…",
+    accept_file="multiple",
+    file_type=["pdf", "txt", "md", "docx"],
+)
 
 if prompt:
+    if prompt.files:
+        st.session_state["upload_file_messages"] = chat.upload_file(
+            prompt.files, chat_id)
     if prompt.text and prompt.text.strip():
         collection = chat.collection_name(chat_id)
         final_state = graph.invoke(
             {"query": prompt.text, "collection": collection})
-        chat.record_compare_turn(chat_id, prompt.text, final_state["answers"])
+        chat.record_compare_turn(
+            chat_id, prompt.text, final_state["answers"],
+            docs=final_state.get("docs"))
     st.rerun()

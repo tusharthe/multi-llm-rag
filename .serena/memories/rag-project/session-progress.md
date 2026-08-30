@@ -1,28 +1,26 @@
-# Session Progress — RAG From Scratch (updated 2026-08-16, evening)
+# Session Progress — RAG From Scratch (updated 2026-08-30, end of day)
 
-Learning-project repo. Read CLAUDE.md (project spec), LEARNING.md (teaching log — "Current Topic" first), AGENTS.md (agent instructions) before working.
+Learning-project repo. Read CLAUDE.md, LEARNING.md (Current Topic), AGENTS.md before working.
 
 ## Where we are
-Backend complete. Continue-mode wired end-to-end. Arena chat_input NOW wired to graph (`arena.py:159-165`). Arena preference UI COMPLETE (mark/toggle-off/reset, persists to record). All docs updated to match.
+Backend complete. Step 2 (merged transcript + sources) DONE and committed `e768fb4`. Step 3 (pill routing + All 3) and Step 4 (smart Compare + Arena pure viewer) DONE and tested, pending final commit. All redesign docs updated.
 
-## DONE — record_compare_turn turn_id (step 0)
-`record_compare_turn` now stamps ONE `turn_id` (uuid4, generated BEFORE the loop) into both user+assistant dicts of every model; `preferences` initialized via setdefault. Return value still `record` (callers re-read history after rerun).
+## DONE today (2026-08-30)
+- `prompts.format_sources(docs)` added; `record_compare_turn`/`record_continue_turn` now accept `docs` and store `sources` on user turn; `group_turn_ids` carries `sources` per group.
+- `current_chat.py`: merged transcript (`turn_groups = group_turn_ids(record)`), header "Next → {model} / All 3", Turns stat `len(turn_groups)`, user bubble `group["query"]` + per-model answer bubbles with correct `model` pill, pill-routing buttons `route_{turn_id}_{model}` → `set_active_model`, All 3 bar `route_all3` → `None`, smart Compare (check `expected=MODEL_LABELS ⊆ answers.keys()`, if not shared re-run graph all-3, `delete_turn` to avoid duplicate).
+- `chat_history.py`: `group_turn_ids` full; `record_compare_turn` turn_id on both dicts + sources + preferences init; `record_continue_turn` docs + sources; `delete_turn(chat_id, turn_id)` removes turn from all models + preferences; legacy fallback via synthetic key.
+- `app_pages/arena.py`: input now accepts files + passes `docs`; pure viewer via `group_turn_ids` → `last_shared` (latest turn where all 3 answered), aligned columns, preference stars keyed to `last_shared` turn_id.
+- Tests: `e768fb4` step 2; post-commit tests for merged, arena viewer, smart Compare no-duplicate, pill routing, legacy fallback — all PASSED.
+- Docs: LEARNING.md items 14-17, AGENTS.md Known Bugs + Redesign COMPLETE, CLAUDE.md §8.
 
-## Agreed UX redesign (LEARNING.md item 12) — NOT yet implemented
-The three-timeline model was REJECTED. Agreed: **one continuous merged conversation, multiple voices**:
-1. **Merged transcript** — current_chat renders ALL models' turns grouped by turn_id, sorted by created_at, user question ONCE per group (dedupe: compare turns write the user turn 3×), each answer bubble tagged with its model. Storage stays `histories: {model: [turns]}` — only the VIEW merges.
-2. **Compare re-run** — "Compare" button re-answers the LAST question with all 3 models ONLY IF last turn isn't shared; NO duplicate — replace the single-model turn.
-3. **Pill routing** — each answer's model pill clickable → `set_active_model` = "next question voiced by X"; plus "All 3" route. Arena becomes pure compare-viewer.
-4. `active_model` semantics = "which model answers the NEXT chat question", not "which timeline".
+## Remaining
+- UI polish: History buttons width, scroll container, Export removal (LEARNING.md previous topic items 3/4/5).
+- Analytics Dashboard (§11) not started; Model Config → backend plumbing (§9) pending.
+- One open bug: Continue-mode `ans is None` when `active_model` unknown → `None` saved (AGENTS.md).
 
-## Next session order
-(0) DONE — turn_id stamped in record_compare_turn. (1) DONE — `group_turn_ids(record)` added to chat_history.py (~line 95): merges ALL models' turns into one timeline grouped by turn_id; each group = {turn_id, created_at, query, answers: {model: text}}; legacy fallback via synthetic key `legacy:{role}:{created_at}:{content}`; sorted by created_at. (2) render merged transcript in current_chat.py (replace `turns = histories.get(active_model, [])` at line 77) → (3) pill routing + "All 3" → (4) Compare re-run with no-duplicate replacement. UI-polish leftovers (History buttons, scroll container, Export removal) still pending.
-
-## Key patterns to preserve
-- Router returns plain LIST of node names; `add_conditional_edges("retrieve", model_router)` 2-arg form. Do NOT "fix" back to a dict (unhashable type: 'list' crash).
-- UI pages call ONLY `graph.invoke`; never models.py/rag.py directly.
-- `preferences[turn_id] = label` — turn_id is the key, label the value; one preference per turn.
-- Old-chat fallback: use `.get("turn_id")` not `["turn_id"]` (KeyError on old JSON).
+## Next session
+- UI polish leftovers, then Analytics (§11) or Model Config wiring (§9) — pick one.
+- No storage change: `histories: {model: [turns]}`; view merges via `group_turn_ids`.
 
 ## Commands
-`uv sync` · `uv run streamlit run app.py` · `uv run reindex --clear --rebuild` (after USE_OLLAMA flip). GPU OOM = VRAM issue, not code bug.
+`uv sync` · `uv run streamlit run app.py` · `uv run reindex --clear --rebuild` after USE_OLLAMA flip. GPU OOM = VRAM issue, not code bug.

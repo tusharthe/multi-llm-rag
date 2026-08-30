@@ -71,11 +71,6 @@ except FileNotFoundError:
 
 histories = record.get("histories", {})
 active_model = record.get("active_model")
-
-if not active_model:
-    active_model = next(iter(histories), None)
-
-turns = histories.get(active_model, []) if active_model else []
 files = record.get("files", [])
 
 turn_groups = chat.group_turn_ids(record)
@@ -104,7 +99,7 @@ with col_chat:
                             </div>
                             <div style="font-family:'Geist Mono',monospace; font-size:11px;
                                         color:var(--muted); margin-top:2px;">
-                                Continuing with {active_model} ·
+                                Next question → {active_model} ·
                                 {MODEL_IDS.get(active_model, "--")}
                             </div>
                         </div>
@@ -116,20 +111,46 @@ with col_chat:
                     f'<div class="page-title" style="font-size:24px;">'
                     f'{record.get("title", "New chat")}</div>'
                     '<div class="page-subtitle" style="margin-bottom:0;">'
-                    "No model chosen yet — run a comparison in Arena first.</div>"
+                    "Next question → All 3 models (comparison).</div>"
                 )
 
         with head_right:
-            # act_a = st.columns(1)
-            # , act_b
             if st.button(
                 "Compare",
                 icon=":material/compare_arrows:",
                 width="content",
-                help="Back to the side-by-side Arena view.",
+                help="Back to Arena. If last answer was single-model, re-runs that question with all 3 (no duplicate).",
             ):
+                # Smart Compare: only re-run when last turn is not shared
+                if turn_groups:
+                    last_group = turn_groups[-1]
+                    expected = set(MODEL_IDS.keys()) if isinstance(MODEL_IDS, dict) else set(MODEL_IDS)
+                    # Fallback: use MODEL_LABELS size when MODEL_IDS not dict-like
+                    try:
+                        # MODEL_IDS is dict in theme.py
+                        is_shared = expected.issubset(set(last_group["answers"].keys()))
+                    except Exception:
+                        is_shared = len(last_group["answers"]) >= 3
+                    last_query = last_group.get("query")
+                    if not is_shared and last_query:
+                        try:
+                            collection_cmp = chat.collection_name(chat_id)
+                            final_state_cmp = graph.invoke(
+                                {"query": last_query, "collection": collection_cmp}
+                            )
+                            # Replace the single-model turn (no duplicate question)
+                            chat.delete_turn(chat_id, last_group["turn_id"])
+                            chat.record_compare_turn(
+                                chat_id,
+                                last_query,
+                                final_state_cmp["answers"],
+                                docs=final_state_cmp.get("docs"),
+                            )
+                        except Exception:
+                            logger.exception("Smart Compare re-run failed")
+                            st.error("Compare re-run failed — check logs.", icon=":material/error:")
+                            st.stop()
                 st.switch_page("app_pages/arena.py")
-            # act_b.button("Export", icon=":material/download:", width="stretch")
         upload_status_container = st.empty()
         if st.session_state["upload_file_messages"]:
             results = st.session_state["upload_file_messages"]
@@ -181,12 +202,40 @@ with col_chat:
                         """
                     )
                     st.markdown(answer)
+                    is_active = (active_model == model)
+                    if st.button(
+                        "Active" if is_active else f"Use {model}",
+                        key=f"route_{group['turn_id']}_{model}",
+                        icon=":material/check:" if is_active else ":material/arrow_forward:",
+                        type="primary" if is_active else "secondary",
+                        width="content",
+                        disabled=is_active,
+                        help=f"Next question will be answered by {model}" if not is_active else f"{model} is active",
+                    ):
+                        chat.set_active_model(chat_id, model)
+                        st.rerun()
 
             if group.get("sources"):
                 with st.expander(
                     "Retrieved context", icon=":material/find_in_page:"
                 ):
                     st.markdown(group["sources"])
+
+        # --- routing bar: which model answers next ---
+        r1, r2 = st.columns([3, 1], vertical_alignment="center")
+        with r1:
+            st.caption(f"Next → **{active_model if active_model else 'All 3 models'}**")
+        with r2:
+            if st.button(
+                "All 3",
+                key="route_all3",
+                icon=":material/compare_arrows:",
+                width="stretch",
+                disabled=active_model is None,
+                help="Next question will be answered by all 3 models",
+            ):
+                chat.set_active_model(chat_id, None)
+                st.rerun()
 
         prompt = st.chat_input(
             "Ask a question about your documents…",
@@ -225,7 +274,7 @@ with col_config:
             {stat_box("Latency", "--")}
             {stat_box("Tokens", "--")}
             {stat_box("Chunks", str(cfg.top_k))}
-            {stat_box("Turns", str(len(turns) // 2))}
+            {stat_box("Turns", str(len(turn_groups)))}
         </div>
         """
     )
