@@ -16,6 +16,7 @@ import chat_history as chat
 from components import empty_state, section_label, stat_box
 from graph import graph
 from logger import logger
+import html
 from theme import MODEL_IDS, avatar, icon
 from config import config as cfg
 from rag import get_retriever
@@ -225,9 +226,7 @@ with col_chat:
 
         for group in turn_groups:
             if group["query"]:
-                spacer, bubble = st.columns([1, 3])
-                with bubble.container(border=True):
-                    st.markdown(group["query"])
+                st.html(f'<div class="msg-user">{html.escape(group["query"])}</div>')
 
             for model, answer in group["answers"].items():
                 with st.container(border=True):
@@ -278,12 +277,12 @@ with col_chat:
                 st.rerun()
 
         thinking_placeholder = st.empty()
-        prompt = st.chat_input(
-            "Ask a question about your documents…",
-            accept_audio=False,
-            accept_file="multiple",
-            file_type=["pdf", "txt", "md", "docx"],
-        )
+    prompt = st.chat_input(
+        "Ask a question about your documents…",
+        accept_audio=False,
+        accept_file="multiple",
+        file_type=["pdf", "txt", "md", "docx"],
+    )
 
 with col_config:
     section_label("Model config")
