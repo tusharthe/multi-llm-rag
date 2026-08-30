@@ -53,6 +53,87 @@ header[data-testid="stHeader"] {
     background: transparent;
 }
 
+/* Top bar: project title + GitHub/Share (rendered from app.py) */
+.topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 10px 16px;
+    margin: 0 0 18px 0;
+    background: var(--surface-lowest);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-1);
+}
+
+.topbar-title {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.topbar-title-main {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--on-surface);
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+}
+
+.topbar-title-sub {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+    line-height: 1.2;
+}
+
+.topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.topbar-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 9999px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--on-surface);
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.topbar-btn--primary {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+}
+
+.topbar-toast {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    background: var(--on-surface);
+    color: #fff;
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+    white-space: nowrap;
+}
+
 /* st.navigation(position="hidden") already removes the auto nav; belt & braces. */
 [data-testid="stSidebarNav"] {
     display: none !important;

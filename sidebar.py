@@ -37,11 +37,10 @@ def _render_brand() -> None:
                         justify-content:center;">
                 {icon("hub", 22)}
             </div>
-            <div>
-                <div style="font-size:16px; font-weight:700; color:var(--on-surface);
-                            line-height:1.2;">RAG Hub Pro</div>
-                <div style="font-family:'Geist Mono',monospace; font-size:11px;
-                            color:var(--muted);">Multi-LLM documents</div>
+            <div style="line-height:1.2;">
+                <div style="font-size:13px; font-weight:800; color:var(--on-surface); letter-spacing:-0.02em;">RAG From Scratch</div>
+                <div style="font-size:11px; font-weight:600; color:var(--on-surface);">Chat with Your Documents + Citations</div>
+                <div style="font-family:'Geist Mono',monospace; font-size:9px; color:var(--muted); margin-top:1px;">Multi-LLM · Citations</div>
             </div>
         </div>
         """
@@ -136,6 +135,30 @@ def _render_footer() -> None:
         </div>
         """
     )
+
+    with st.sidebar.expander("Guidelines & Terms", icon=":material/gavel:"):
+        st.markdown(
+            """
+            **RAG From Scratch — Certification project (learning purpose only).**
+
+            This is an academic / portfolio build (IIT Patna AI/ML). No SLA, no warranty, no guarantee of accuracy.
+
+            **Be careful what you upload:**
+            - Do **not** upload sensitive, confidential, or personally identifiable data (IDs, health records, financial docs, credentials). You are fully responsible for the files you upload.
+            - Files are stored locally in `chats/{id}` and vectorized into `chroma_db/` on this machine. They are **not** encrypted at rest and are **not** backed up. Delete the chat to remove its files and vectors.
+            - The app answers **only** from retrieved context and cites sources as [1], [2]… Always verify citations before acting on an answer — outputs can be incomplete or mis-cited.
+
+            **Costs & privacy:**
+            - With `USE_OLLAMA=true` everything runs locally via Ollama. With `USE_OLLAMA=false` your query + retrieved chunks are sent to OpenAI / Anthropic / Google per their terms.
+
+            **Indexing:**
+            - Chunk size is baked into the stored vectors. Change it in **Model settings** only when the chat has no index; otherwise use **Clear** in the sidebar, then rebuild. Flipping `USE_OLLAMA` changes embedding dimensions — run `uv run reindex --clear --rebuild`.
+
+            *Use at your own risk. Authors are not liable for data loss or model output. For learning purposes only.*
+            """
+        )
+        st.caption(
+            "Questions? Check Model settings → Retrieval and indexing, or the README.")
 
 
 def render_sidebar(pages: dict[str, Any], active_key: str) -> None:

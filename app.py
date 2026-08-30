@@ -1,4 +1,4 @@
-"""RAG Hub Pro -- Streamlit entry point.
+"""RAG From Scratch (Chat with Your Documents + Citations) -- Streamlit entry point.
 
 Owns the three things that must happen exactly once per script run:
 
@@ -17,7 +17,7 @@ from __future__ import annotations
 import streamlit as st
 
 st.set_page_config(
-    page_title="RAG Hub Pro",
+    page_title="RAG From Scratch (Chat with Your Documents + Citations)",
     page_icon=":material/hub:",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -99,6 +99,32 @@ def init_session_defaults() -> None:
 inject_css()
 init_session_defaults()
 ensure_active_chat()
+
+# --- Top bar: project title + GitHub + Share (sits above page content) ---
+def _render_top_bar() -> None:
+    st.html(
+        """
+        <div class="topbar">
+            <div class="topbar-title">
+                <span class="topbar-title-main">RAG From Scratch</span>
+                <span class="topbar-title-sub">Chat with Your Documents + Citations</span>
+            </div>
+            <div class="topbar-actions">
+                <a class="topbar-btn" href="https://github.com" target="_blank" rel="noopener" title="Open GitHub">
+                    <span class="material-symbols-outlined" style="font-size:16px;">code</span>
+                    GitHub
+                </a>
+                <button class="topbar-btn topbar-btn--primary" onclick="navigator.clipboard.writeText(window.location.href).then(()=>{const t=document.getElementById('topbar-share-toast'); if(t){t.style.opacity='1'; setTimeout(()=>t.style.opacity='0', 1800)}}); if(navigator.share){navigator.share({title: document.title, url: window.location.href}).catch(()=>{});}" title="Copy link / Share">
+                    <span class="material-symbols-outlined" style="font-size:16px;">share</span>
+                    Share
+                </button>
+                <span id="topbar-share-toast" class="topbar-toast">Link copied</span>
+            </div>
+        </div>
+        """
+    )
+
+_render_top_bar()
 
 nav = st.navigation(list(PAGES.values()), position="hidden")
 
