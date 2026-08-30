@@ -78,6 +78,8 @@ if not active_model:
 turns = histories.get(active_model, []) if active_model else []
 files = record.get("files", [])
 
+turn_groups = chat.group_turn_ids(record)
+
 col_chat, col_config = st.columns([2.9, 1.1], gap="large")
 
 upload_status_container = None
@@ -153,37 +155,38 @@ with col_chat:
 
         st.html('<div style="height:12px;"></div>')
 
-        if not turns:
+        if not turn_groups:
             empty_state(
                 "forum",
                 "No messages yet",
                 "Ask a question below and the answer will appear here.",
             )
 
-        for turn in turns:
-            if turn["role"] == "user":
+        for group in turn_groups:
+            if group["query"]:
                 spacer, bubble = st.columns([1, 3])
                 with bubble.container(border=True):
-                    st.markdown(turn["content"])
-            else:
+                    st.markdown(group["query"])
+
+            for model, answer in group["answers"].items():
                 with st.container(border=True):
                     st.html(
                         f"""
                         <div style="display:flex; align-items:center; gap:8px;
                                     margin-bottom:2px;">
                             <span class="pill pill-primary">
-                                {icon("bolt", 13)} {active_model}
+                                {icon("bolt", 13)} {model}
                             </span>
                         </div>
                         """
                     )
-                    st.markdown(turn["content"])
+                    st.markdown(answer)
 
-                    if turn.get("sources"):
-                        with st.expander(
-                            "Retrieved context", icon=":material/find_in_page:"
-                        ):
-                            st.markdown(turn["sources"])
+            if group.get("sources"):
+                with st.expander(
+                    "Retrieved context", icon=":material/find_in_page:"
+                ):
+                    st.markdown(group["sources"])
 
         prompt = st.chat_input(
             "Ask a question about your documents…",
@@ -191,7 +194,6 @@ with col_chat:
             accept_file="multiple",
             file_type=["pdf", "txt", "md", "docx"],
         )
-
 
 with col_config:
     section_label("Model config")
@@ -248,7 +250,8 @@ def process_text(text: str, chat_id: str):
 
     if active_model is None:
         final_state = graph.invoke({"query": text, "collection": collection})
-        chat.record_compare_turn(chat_id, text, final_state["answers"])
+        chat.record_compare_turn(
+            chat_id, text, final_state["answers"], docs=final_state.get("docs"))
     else:
         final_state = graph.invoke({
             "query": text, "collection": collection, "active_model": active_model,
@@ -262,7 +265,8 @@ def process_text(text: str, chat_id: str):
         if ans is None:
             logger.warning("No answer found for model %s", active_model)
 
-        chat.record_continue_turn(chat_id, active_model, text, ans)
+        chat.record_continue_turn(
+            chat_id, active_model, text, ans, docs=final_state.get("docs"))
 
     return final_state["answers"]
 

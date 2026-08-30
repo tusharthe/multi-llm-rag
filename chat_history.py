@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 from logger import logger
 from rag import build_index, clear_index
 from ingestion import load_and_split
+from prompts import format_sources
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -122,11 +123,13 @@ def group_turn_ids(record: dict[str, Any]) -> list[dict[str, Any]]:
                 "turn_id": turn_id,
                 "created_at": item["created_at"],
                 "query": None,
+                "sources": None,
                 "answers": {},
             })
 
             if item["role"] == "user":
                 group["query"] = item["content"]
+                group["sources"] = item.get("sources")
                 if item["created_at"] < group["created_at"]:
                     group["created_at"] = item["created_at"]
             else:
@@ -185,21 +188,23 @@ def list_chats() -> list[dict[str, Any]]:
     return items
 
 
-def record_compare_turn(chat_id, query, answers):
+def record_compare_turn(chat_id, query, answers, docs=None):
     # histories: {
-    #     "OpenAI":    [{role, content, created_at}, {role, content, created_at}, ...],
+    #     "OpenAI":    [{role, content, turn_id, created_at}, ...],
     #     "Anthropic": [...],
     #     "Gemini":    [...],
     # }
     record = load_chat(chat_id)
     histories = record.get("histories", {})
     turn_id = str(uuid.uuid4())
+    sources = format_sources(docs) if docs else None
 
     for model, answer in answers.items():
         histories.setdefault(model, []).extend([{
             'role': 'user',
             'content': query,
             'turn_id': turn_id,
+            'sources': sources,
             'created_at':  datetime.now().isoformat()
         }, {
             'role': 'assistant',
@@ -214,14 +219,16 @@ def record_compare_turn(chat_id, query, answers):
     return record
 
 
-def record_continue_turn(chat_id, model, query, answer):
+def record_continue_turn(chat_id, model, query, answer, docs=None):
     record = load_chat(chat_id)
     turn_id = str(uuid.uuid4())
     histories = record.get("histories", {})
+    sources = format_sources(docs) if docs else None
     histories.setdefault(model, []).extend([{
         'role': 'user',
         'content': query,
         'turn_id': turn_id,
+        'sources': sources,
         'created_at':  datetime.now().isoformat()
     }, {
         'role': 'assistant',

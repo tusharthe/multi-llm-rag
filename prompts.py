@@ -32,6 +32,23 @@ def format_context(docs: list[Document]):
     return joined_context
 
 
+def format_sources(docs: list[Document]) -> str:
+    """Render retrieved chunks as a display string for the Sources section.
+
+    Mirrors the numbering used in ``format_context`` ([1], [2], ...) so the
+    citation numbers in an answer line up with the sources shown below it.
+    """
+    blocks = []
+    for idx, doc in enumerate(docs, start=1):
+        filename = doc.metadata.get("source", "unknown")
+        chunk_index = doc.metadata.get("chunk_index", "?")
+        blocks.append(
+            f"[{idx}] **{filename}** (chunk {chunk_index})\n\n"
+            f"{doc.page_content.strip()}"
+        )
+    return "\n\n---\n\n".join(blocks)
+
+
 if __name__ == "__main__":
     docs = get_retriever('chat_test').invoke("What this document say?")
     print(format_context(docs))
