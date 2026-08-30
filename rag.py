@@ -41,8 +41,10 @@ def build_index(chunks: list[Document], collection_name: str) -> Chroma:
     return vector_store
 
 
-def get_retriever(collection_name: str, k: int = cfg.top_k) -> VectorStoreRetriever:
+def get_retriever(collection_name: str, k: int | None = None) -> VectorStoreRetriever:
     """Return a retriever backed by the Chroma vector store."""
+    if k is None:
+        k = cfg.top_k  # live cfg so slider changes take effect without restart
     vector_store = Chroma(
         persist_directory=str(CHROMA_DIR),
         collection_name=collection_name,

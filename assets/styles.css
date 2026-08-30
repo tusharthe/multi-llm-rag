@@ -465,6 +465,27 @@ section[data-testid="stSidebar"] .stButton button {
     border-radius: 10px;
 }
 
+section[data-testid="stSidebar"] .stButton button > div {
+    justify-content: flex-start;
+}
+
+[class*="st-key-nav_"] button,
+[class*="st-key-nav_"] button > div {
+    justify-content: flex-start !important;
+    text-align: left !important;
+}
+
+/* Keep primary action "New chat" centered despite the nav left-align rule */
+.st-key-new_chat button,
+.st-key-new_chat button > div,
+.st-key-build_index button,
+.st-key-build_index button > div,
+.st-key-clear_index button,
+.st-key-clear_index button > div {
+    justify-content: center !important;
+    text-align: center !important;
+}
+
 section[data-testid="stSidebar"] .stButton button[kind="tertiary"] {
     color: var(--on-surface);
     padding-left: 12px;

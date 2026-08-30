@@ -9,7 +9,11 @@ from prompts import SYSTEM_PROMPT, format_context
 from rag import get_retriever
 from functools import partial
 
-models = get_models()
+# Nodes are registered once at import for the static set of available models.
+# The actual LLM objects are NOT cached here — run_model re-creates them via
+# get_models() so live cfg.* (temperature/top_p/max_tokens) from the sliders
+# is respected on every query.
+_static_models = get_models()
 
 
 class RetrievalState(TypedDict, total=False):
@@ -40,7 +44,10 @@ def run_model(state: RetrievalState, model_label: str) -> RetrievalState:
     query = state["query"]
     docs = state["docs"]  # same docs for all models
 
-    llm = models[model_label]
+    # Re-create with live cfg so slider changes (temperature/top_p/max_tokens)
+    # are picked up without restarting the app.
+    live_models = get_models()
+    llm = live_models[model_label]
 
     human_message = format_context(docs) + "\n\n" + query
 
@@ -83,11 +90,14 @@ def collect(state: RetrievalState) -> RetrievalState:
 def model_router(state: RetrievalState) -> list[str]:
     active_model = state.get("active_model")
 
+    # Use a fresh get_models() so a provider that becomes (un)available is
+    # reflected, and so the router sees the same key set as run_model.
+    live_models = get_models()
     if not active_model or active_model == "All":
-        return [f"{k.lower()}_node" for k in models.keys()]
+        return [f"{k.lower()}_node" for k in live_models.keys()]
 
     target_node = f"{active_model.lower()}_node"
-    all_valid_nodes = [f"{k.lower()}_node" for k in models.keys()]
+    all_valid_nodes = [f"{k.lower()}_node" for k in live_models.keys()]
 
     if target_node in all_valid_nodes:
         return [target_node]
@@ -102,7 +112,7 @@ builder.add_node("collect", collect)
 
 builder.add_edge(START, "retrieve")
 
-for model_label in models.keys():
+for model_label in _static_models.keys():
     # e.g. "OpenAI_node", "Anthropic_node", "Gemini_node"
     node_name = f"{model_label.lower()}_node"
 

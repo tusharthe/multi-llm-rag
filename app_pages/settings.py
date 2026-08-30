@@ -89,16 +89,16 @@ st.caption("Shared by every model call. Session-level, not saved per chat.")
 with st.container(border=True):
     left, mid, right = st.columns(3, gap="medium")
 
-    left.slider(
-        "Temperature", 0.0, 1.0, key="temperature", step=0.05,
+    cfg.temperature = left.slider(
+        "Temperature", 0.0, 1.0, value=cfg.temperature, key="temperature", step=0.05,
         help="Higher values make answers more varied.",
     )
-    mid.slider(
-        "Top-p", 0.0, 1.0, key="top_p", step=0.05,
+    cfg.top_p = mid.slider(
+        "Top-p", 0.0, 1.0, value=cfg.top_p, key="top_p", step=0.05,
         help="Nucleus sampling cutoff.",
     )
-    right.slider(
-        "Max tokens", 128, 4096, key="max_tokens", step=128,
+    cfg.num_predict = right.slider(
+        "Max tokens", 128, 4096, value=cfg.num_predict, key="max_tokens", step=128,
         help="Upper bound on answer length.",
     )
 
@@ -117,12 +117,12 @@ has_index = bool(record.get("files"))
 with st.container(border=True):
     left, right = st.columns(2, gap="medium")
 
-    left.slider(
-        "Retrieved chunks (k)", 1, 10, key="top_k",
+    cfg.top_k = left.slider(
+        "Retrieved chunks (k)", 1, 10, value=cfg.top_k, key="top_k",
         help="How many context chunks each model receives.",
     )
-    right.slider(
-        "Chunk size", 200, 2000, key="chunk_size", step=100,
+    cfg.chunk_size = right.slider(
+        "Chunk size", 200, 2000, value=cfg.chunk_size, key="chunk_size", step=100,
         disabled=has_index,
         help=(
             "Applied when the index is built. Locked while this chat already "

@@ -17,29 +17,60 @@ model_list = {  # label →(ollama_model_name, prod_class, prod_model_id, api_ke
 }
 
 
-def get_models(temperature: float = cfg.temperature) -> dict[str, BaseChatModel]:
-    result = {}
+def get_models(
+    temperature: float | None = None,
+    top_p: float | None = None,
+    max_tokens: int | None = None,
+) -> dict[str, BaseChatModel]:
+    # Read live cfg if caller did not pass an explicit override — so slider
+    # changes (cfg.temperature / cfg.top_p / cfg.num_predict) take effect
+    # without needing to restart the app.
+    if temperature is None:
+        temperature = cfg.temperature
+    if top_p is None:
+        top_p = cfg.top_p
+    if max_tokens is None:
+        max_tokens = cfg.num_predict
+    result: dict[str, BaseChatModel] = {}
     for model_name, model_value in model_list.items():
         needed = model_value[0] if cfg.use_ollama else model_value[3]
         if needed:
             result[model_name] = make_chat(
-                model_value[0], model_value[1], model_value[2], temperature)
+                model_value[0], model_value[1], model_value[2],
+                temperature, top_p, max_tokens)
     return result
 
 
-def make_chat(ollama_name: str, prod_class: Type[BaseChatModel], prod_model: str, temperature: float) -> BaseChatModel:
+def make_chat(
+    ollama_name: str,
+    prod_class: Type[BaseChatModel],
+    prod_model: str,
+    temperature: float,
+    top_p: float,
+    max_tokens: int,
+) -> BaseChatModel:
     if cfg.use_ollama:
         return ChatOllama(
             model=ollama_name,
             temperature=temperature,
-            num_predict=cfg.default_num_predict,
+            top_p=top_p,
+            num_predict=max_tokens,
             base_url=cfg.ollama_base_url,
         )
     else:
+        # ChatGoogleGenerativeAI uses max_output_tokens, the others use max_tokens.
+        if prod_class is ChatGoogleGenerativeAI:
+            return prod_class(
+                model=prod_model,
+                temperature=temperature,
+                top_p=top_p,
+                max_output_tokens=max_tokens,
+            )
         return prod_class(
             model=prod_model,
             temperature=temperature,
-            max_tokens=cfg.default_num_predict,
+            top_p=top_p,
+            max_tokens=max_tokens,
         )
 
 

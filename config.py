@@ -40,7 +40,10 @@ class RuntimeConfig:
             "USE_OLLAMA", "false").strip().lower() == "true"
 
         self.top_k = int(os.getenv("TOP_K", "4"))
-        self.top_p = float(os.getenv("TOP_P", "9"))
+        # TOP_P is 0..1 (nucleus sampling). Old default "9" was out-of-range
+        # for the 0-1 sliders — clamp env-provided value into [0,1].
+        raw_top_p = float(os.getenv("TOP_P", "1.0"))
+        self.top_p = max(0.0, min(1.0, raw_top_p))
 
         self.chunk_size = int(os.getenv("CHUNK_SIZE", "1000"))
         self.chunk_overlap = int(os.getenv("CHUNK_OVERLAP", "200"))
