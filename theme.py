@@ -17,6 +17,33 @@ import streamlit as st
 STYLESHEET = Path(__file__).parent / "assets" / "styles.css"
 TOKENS_LIGHT = Path(__file__).parent / "assets" / "tokens-light.css"
 TOKENS_DARK = Path(__file__).parent / "assets" / "tokens-dark.css"
+FAVICON = Path(__file__).parent / "assets" / "favicon.svg"
+LOGO = Path(__file__).parent / "assets" / "logo.svg"
+
+
+def favicon_link_tag() -> str:
+    """``<link rel=icon>`` for the custom mark, as a data URI.
+
+    ``st.set_page_config(page_icon=...)`` only accepts emoji / Material
+    icons, so the SVG favicon is injected here instead. Browsers honour
+    ``<link rel="icon">`` found anywhere in the document, and the data URI
+    keeps it self-contained (no static-file serving needed).
+    """
+    from urllib.parse import quote
+
+    svg = FAVICON.read_text(encoding="utf-8")
+    return (
+        '<link rel="icon" type="image/svg+xml" '
+        f'href="data:image/svg+xml,{quote(svg, safe="")}">'
+    )
+
+
+def brand_mark_data_uri() -> str:
+    """The favicon mark as a base64 data URI, for ``<img>`` in the sidebar."""
+    import base64
+
+    raw = FAVICON.read_bytes()
+    return "data:image/svg+xml;base64," + base64.b64encode(raw).decode("ascii")
 
 # ---------------------------------------------------------------------------
 # Design tokens -- mirror of the dark :root block in assets/tokens-dark.css,
@@ -91,6 +118,7 @@ def inject_css() -> None:
     tokens = tokens_path.read_text(encoding="utf-8")
     css = STYLESHEET.read_text(encoding="utf-8")
     st.markdown(f"<style>{tokens}\n{css}</style>", unsafe_allow_html=True)
+    st.markdown(favicon_link_tag(), unsafe_allow_html=True)
 
 
 def icon(name: str, size: int = 18, color: str | None = None) -> str:

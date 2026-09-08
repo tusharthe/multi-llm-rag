@@ -18,7 +18,7 @@ import streamlit as st
 
 st.set_page_config(
     page_title="RAG From Scratch (Chat with Your Documents + Citations)",
-    page_icon=":material/hub:",
+    page_icon=":material/document_search:",
     layout="wide",
     initial_sidebar_state="expanded",
 )

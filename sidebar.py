@@ -16,7 +16,7 @@ import streamlit as st
 
 import chat_history as chat
 from logger import logger
-from theme import effective_theme, icon
+from theme import brand_mark_data_uri, effective_theme, icon
 
 #: (page key, label, material icon) -- page key matches the registry in app.py.
 NAV_ITEMS = [
@@ -32,11 +32,9 @@ def _render_brand() -> None:
     st.sidebar.html(
         f"""
         <div style="display:flex; align-items:center; gap:12px; margin-bottom:18px;">
-            <div style="background:var(--primary); color:#fff; width:40px; height:40px;
-                        border-radius:12px; display:flex; align-items:center;
-                        justify-content:center;">
-                {icon("hub", 22)}
-            </div>
+            <img src="{brand_mark_data_uri()}" width="40" height="40"
+                 alt="RAG From Scratch logo"
+                 style="border-radius:12px; display:block; flex:none;" />
             <div style="line-height:1.2;">
                 <div style="font-size:13px; font-weight:800; color:var(--on-surface); letter-spacing:-0.02em;">RAG From Scratch</div>
                 <div style="font-size:11px; font-weight:600; color:var(--on-surface);">Chat with Your Documents + Citations</div>
