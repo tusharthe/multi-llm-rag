@@ -1,0 +1,36 @@
+/* Dark theme tokens (warm graphite, eye-friendly). Injected by
+   theme.inject_css() when the effective Streamlit theme (config base +
+   user's Settings override) is dark. */
+
+:root {
+    --surface: #262326;
+    --surface-lowest: #2e2a2c;
+    --surface-low: #232023;
+    --surface-container: #353134;
+    --surface-high: #3d383b;
+    --surface-highest: #463f43;
+    --on-surface: #ece7e4;
+    --on-surface-variant: #c9b8b4;
+    --outline: #a08a86;
+    --outline-variant: #5a4440;
+    --primary: #d92d34;
+    --primary-container: #a3161f;
+    --primary-fixed: #ffdad6;
+    --on-primary-fixed-variant: #93000d;
+    --tertiary: #6fc3d8;
+    --success: #4caf7d;
+    --warning: #e09a4a;
+    --muted: #a8a29e;
+    --border: #463f43;
+
+    --msg-user-bg: #1e3a5f;
+    --msg-user-border: #2d4a73;
+    --pill-success-bg: #1d3a28;
+    --pill-success-fg: #7bc89a;
+    --pill-success-border: #2c5a3e;
+
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --shadow-1: 0 1px 3px rgba(0, 0, 0, 0.45);
+    --shadow-2: 0 4px 12px rgba(0, 0, 0, 0.5);
+}

@@ -162,16 +162,9 @@ else:
 # -------------------------------------------------------------------- input --
 
 thinking_placeholder = st.empty()
-prompt = st.chat_input(
-    "Ask all models a question…",
-    accept_file="multiple",
-    file_type=["pdf", "txt", "md", "docx"],
-)
+prompt = st.chat_input("Ask all models a question…")
 
 if prompt:
-    if prompt.files:
-        st.session_state["upload_file_messages"] = chat.upload_file(
-            prompt.files, chat_id)
     if prompt.text and prompt.text.strip():
         with thinking_placeholder:
             with st.status("Thinking with all 3 models…  retrieving + generating in parallel", expanded=True) as status:

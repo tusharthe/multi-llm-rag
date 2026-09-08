@@ -1,0 +1,36 @@
+/* Light theme tokens. Injected by theme.inject_css() when the effective
+   Streamlit theme (config base + user's Settings override) is light.
+   Mirrors the Stitch design export (rag_hub_core/DESIGN.md). */
+
+:root {
+    --surface: #fcf9f8;
+    --surface-lowest: #ffffff;
+    --surface-low: #f6f3f2;
+    --surface-container: #f0eded;
+    --surface-high: #eae7e7;
+    --surface-highest: #e5e2e1;
+    --on-surface: #1b1c1c;
+    --on-surface-variant: #5b403d;
+    --outline: #906f6c;
+    --outline-variant: #e4beb9;
+    --primary: #b7131a;
+    --primary-container: #db322f;
+    --primary-fixed: #ffdad6;
+    --on-primary-fixed-variant: #93000d;
+    --tertiary: #006578;
+    --success: #15803d;
+    --warning: #b45309;
+    --muted: #8a8686;
+    --border: #e5e2e1;
+
+    --msg-user-bg: #eef4fb;
+    --msg-user-border: #d8e5f3;
+    --pill-success-bg: #e8f5ec;
+    --pill-success-fg: #15803d;
+    --pill-success-border: #c9e7d3;
+
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --shadow-1: 0 1px 3px rgba(0, 0, 0, 0.04);
+    --shadow-2: 0 4px 12px rgba(0, 0, 0, 0.05);
+}

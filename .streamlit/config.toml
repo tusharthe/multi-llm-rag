@@ -1,14 +1,14 @@
 [theme]
 # Tokens mirror the Stitch design export (rag_hub_core/DESIGN.md).
-base = "light"
+base = "dark"
 
-primaryColor = "#b7131a"
-backgroundColor = "#fcf9f8"
-secondaryBackgroundColor = "#f0eded"
-textColor = "#1b1c1c"
-linkColor = "#006578"
-borderColor = "#e5e2e1"
-codeBackgroundColor = "#f6f3f2"
+primaryColor = "#d92d34"
+backgroundColor = "#262326"
+secondaryBackgroundColor = "#2e2a2c"
+textColor = "#ece7e4"
+linkColor = "#6fc3d8"
+borderColor = "#463f43"
+codeBackgroundColor = "#2e2a2c"
 
 # Shape language: 12px base radius on cards/inputs/buttons.
 baseRadius = "12px"
@@ -27,19 +27,19 @@ headingFontWeights = [700, 600, 600, 600, 500, 500]
 linkUnderline = false
 
 # Status colors used by st.badge and :green-badge[...] markdown.
-greenColor = "#15803d"
-orangeColor = "#b45309"
-redColor = "#b7131a"
-blueColor = "#006578"
-grayColor = "#8a8686"
+greenColor = "#4caf7d"
+orangeColor = "#e09a4a"
+redColor = "#d92d34"
+blueColor = "#6fc3d8"
+grayColor = "#a8a29e"
 
 # Per-model series colors for the analytics charts.
 chartCategoricalColors = ["#10a37f", "#d97757", "#4285f4", "#b7131a", "#006578"]
 
 [theme.sidebar]
-backgroundColor = "#f6f3f2"
-secondaryBackgroundColor = "#eae7e7"
-borderColor = "#e5e2e1"
+backgroundColor = "#1b1819"
+secondaryBackgroundColor = "#262223"
+borderColor = "#3a3335"
 
 
 [browser]

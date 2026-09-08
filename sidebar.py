@@ -16,7 +16,7 @@ import streamlit as st
 
 import chat_history as chat
 from logger import logger
-from theme import icon
+from theme import effective_theme, icon
 
 #: (page key, label, material icon) -- page key matches the registry in app.py.
 NAV_ITEMS = [
@@ -192,3 +192,32 @@ def render_sidebar(pages: dict[str, Any], active_key: str) -> None:
 
     if active_key in ("chat", "arena"):
         _render_knowledge_source()
+
+    _render_appearance()
+
+
+def _render_appearance() -> None:
+    """Show the live theme + where to switch it.
+
+    Streamlit reserves theme switching to the viewer (⋮ → Settings), app
+    code cannot flip native widgets — so this row only *displays* the
+    effective theme (``theme.effective_theme()``) and points at the control.
+    """
+    mode = effective_theme()
+    is_dark = mode == "dark"
+    st.sidebar.html(
+        f"""
+        <div style="margin-top:14px; padding-top:12px;
+                    border-top:1px solid var(--surface-high);
+                    display:flex; align-items:center; gap:8px;">
+            <span style="color:var(--muted); display:inline-flex;">
+                {icon("dark_mode" if is_dark else "light_mode", 15)}
+            </span>
+            <span style="font-size:12px; font-weight:600;
+                         color:var(--on-surface-variant);">
+                {"Dark" if is_dark else "Light"} mode
+            </span>
+        </div>
+        """
+    )
+    st.sidebar.caption("Switch theme via ⋮ → Settings → Appearance.")

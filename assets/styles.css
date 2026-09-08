@@ -10,32 +10,9 @@
      itself, so the inline icon spans below reuse it instead of pulling a
      second icon font off the network. */
 
-:root {
-    --surface: #fcf9f8;
-    --surface-lowest: #ffffff;
-    --surface-low: #f6f3f2;
-    --surface-container: #f0eded;
-    --surface-high: #eae7e7;
-    --surface-highest: #e5e2e1;
-    --on-surface: #1b1c1c;
-    --on-surface-variant: #5b403d;
-    --outline: #906f6c;
-    --outline-variant: #e4beb9;
-    --primary: #b7131a;
-    --primary-container: #db322f;
-    --primary-fixed: #ffdad6;
-    --on-primary-fixed-variant: #93000d;
-    --tertiary: #006578;
-    --success: #15803d;
-    --warning: #b45309;
-    --muted: #8a8686;
-    --border: #e5e2e1;
-
-    --radius-md: 12px;
-    --radius-lg: 16px;
-    --shadow-1: 0 1px 3px rgba(0, 0, 0, 0.04);
-    --shadow-2: 0 4px 12px rgba(0, 0, 0, 0.05);
-}
+/* NOTE: :root color tokens live in assets/tokens-light.css and
+   assets/tokens-dark.css. theme.inject_css() injects the file matching the
+   effective Streamlit theme, so the app follows Light/Dark from Settings. */
 
 /* -------------------------------------------------------------- shell --- */
 
@@ -124,7 +101,7 @@ header[data-testid="stHeader"] {
     right: 0;
     top: calc(100% + 8px);
     background: var(--on-surface);
-    color: #fff;
+    color: var(--surface);
     font-size: 11px;
     padding: 4px 8px;
     border-radius: 6px;
@@ -230,9 +207,9 @@ section[data-testid="stSidebar"] {
 }
 
 .pill-success {
-    background: #e8f5ec;
-    color: var(--success);
-    border-color: #c9e7d3;
+    background: var(--pill-success-bg);
+    color: var(--pill-success-fg);
+    border-color: var(--pill-success-border);
 }
 
 .pill-primary {
@@ -265,8 +242,8 @@ section[data-testid="stSidebar"] {
 /* -------------------------------------------------------- chat bubbles -- */
 
 .msg-user {
-    background: #eef4fb;
-    border: 1px solid #d8e5f3;
+    background: var(--msg-user-bg);
+    border: 1px solid var(--msg-user-border);
     border-radius: var(--radius-md);
     padding: 14px 18px;
     margin: 0 0 6px auto;
