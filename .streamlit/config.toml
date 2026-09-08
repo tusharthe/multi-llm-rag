@@ -46,6 +46,13 @@ borderColor = "#3a3335"
 gatherUsageStats = false
 
 
+[client]
+# "auto" hides Settings when the app is opened via a non-localhost URL
+# (LAN IP / hostname resolve to the viewer toolbar). Pin "developer" so the
+# ⋮ menu always shows Settings → Appearance (the theme switch).
+toolbarMode = "developer"
+
+
 [server]
 # Automatically re-runs the script when a file is modified on disk
 runOnSave = true
