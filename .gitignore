@@ -8,6 +8,9 @@ chroma_db/
 # Local source documents for reindex --rebuild (not committed)
 docs/
 
+# Raw chat records (per-chat JSON with user questions + model answers)
+chats/
+
 # Log files — contain document text, prompts and model responses
 logs/
 
