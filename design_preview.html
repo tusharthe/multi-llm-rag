@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RAG From Scratch — Design Preview</title>
+<style>
+  :root{ --surface:#fcf9f8; --surface-lowest:#fff; --surface-low:#f6f3f2; --border:#e5e2e1; --on-surface:#1b1c1c; --muted:#8a8686; --primary:#b7131a; --primary-fixed:#ffdad6; --on-primary-fixed:#93000d; --radius-md:12px; --radius-lg:16px; }
+  *{box-sizing:border-box} body{margin:0; font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif; background:var(--surface); color:var(--on-surface)}
+  .topbar{ display:flex; align-items:center; justify-content:space-between; gap:16px; padding:12px 18px; background:var(--surface-lowest); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:10}
+  .topbar-title-main{font-size:15px; font-weight:800; letter-spacing:-.02em} .topbar-title-sub{font-size:12px; color:var(--muted); font-weight:500}
+  .topbar-actions{display:flex; gap:8px} .topbar-btn{ display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:9999px; border:1px solid var(--border); background:#fff; font-size:12px; font-weight:600; text-decoration:none; color:var(--on-surface)} .topbar-btn--primary{background:var(--primary); color:#fff; border-color:var(--primary)}
+  .shell{display:grid; grid-template-columns:280px 1fr 320px; min-height:calc(100vh - 48px)}
+  .sidebar{ background:var(--surface-low); border-right:1px solid var(--border); padding:18px 14px}
+  .brand{display:flex; gap:12px; align-items:center; margin-bottom:18px} .brand-icon{width:40px; height:40px; border-radius:12px; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700}
+  .brand-title{font-size:13px; font-weight:800; line-height:1.1} .brand-sub{font-size:11px; font-weight:600} .brand-meta{font-family:Geist Mono,monospace; font-size:9px; color:var(--muted)}
+  .btn-primary{ background:var(--primary); color:#fff; border:none; border-radius:9999px; padding:10px 14px; width:100%; font-weight:700; text-align:center}
+  .menu{margin-top:18px} .menu-label{font-family:Geist Mono,monospace; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin:12px 0 8px}
+  .nav-item{ display:flex; align-items:center; gap:8px; padding:9px 12px; border-radius:10px; font-weight:500; font-size:13px} .nav-item.active{ background:var(--primary-fixed); color:var(--on-primary-fixed); border-left:3px solid var(--primary); border-radius:0 10px 10px 0}
+  .center{ padding:18px; background:var(--surface)} .card{ background:var(--surface-lowest); border:1px solid var(--border); border-radius:12px; padding:18px; margin-bottom:14px}
+  .page-title{font-size:22px; font-weight:700; letter-spacing:-.02em} .pill{ display:inline-flex; gap:6px; align-items:center; border-radius:9999px; padding:3px 10px; font-family:Geist Mono,monospace; font-size:11px; border:1px solid var(--border); background:var(--primary-fixed); color:var(--on-primary-fixed)}
+  .msg-user{ background:#eef4fb; border:1px solid #d8e5f3; border-radius:12px; padding:12px 16px; margin-left:auto; max-width:82%; font-size:14px}
+  .msg-ai{ background:var(--surface-lowest); border:1px solid var(--border); border-radius:12px; padding:14px 16px; box-shadow:0 1px 3px rgba(0,0,0,.04)}
+  .input{ display:flex; align-items:center; gap:8px; background:var(--surface-low); border:1px solid var(--border); border-radius:9999px; padding:10px 14px; color:var(--muted); margin-top:12px}
+  .right{ padding:18px; border-left:1px solid var(--border); background:var(--surface)} .right-card{ background:var(--surface-lowest); border:1px solid var(--border); border-radius:12px; padding:14px; margin-bottom:12px}
+  .k{font-family:Geist Mono,monospace; font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em}
+  @media (max-width:1100px){ .shell{grid-template-columns:280px 1fr} .right{display:none} }
+</style>
+<div class="topbar">
+  <div>
+    <div class="topbar-title-main">RAG From Scratch</div>
+    <div class="topbar-title-sub">Chat with Your Documents + Citations</div>
+  </div>
+  <div class="topbar-actions">
+    <a class="topbar-btn" href="https://github.com" target="_blank">⬡ GitHub</a>
+    <a class="topbar-btn topbar-btn--primary" href="#">↗ Share</a>
+  </div>
+</div>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand"><div class="brand-icon">⬢</div><div><div class="brand-title">RAG From Scratch</div><div class="brand-sub">Chat with Your Documents + Citations</div><div class="brand-meta">Multi-LLM · Citations · Local/Ollama</div></div></div>
+    <div class="btn-primary">＋ New chat</div>
+    <div class="menu"><div class="menu-label">Menu</div>
+      <div class="nav-item active">◫ Current chat</div><div class="nav-item">⇄ Arena</div><div class="nav-item">◷ History</div><div class="nav-item">▆ Analytics</div><div class="nav-item">⚙ Model settings</div>
+    </div>
+    <div class="menu-label">Knowledge source</div>
+    <div style="border:1px dashed #e4beb9; border-radius:12px; padding:10px; background:#fff; text-align:center; font-size:12px; color:var(--muted)">＋ Upload<br><small>200MB per file · PDF, TXT, MD …</small></div>
+    <div style="display:flex; gap:8px; margin-top:10px"><div style="flex:1; background:#fff; border:1px solid var(--border); border-radius:9999px; padding:8px; text-align:center; font-size:12px">Build</div><div style="flex:1; background:#fff; border:1px solid var(--border); border-radius:9999px; padding:8px; text-align:center; font-size:12px">Clear</div></div>
+    <div style="margin-top:14px; border-top:1px solid var(--border); padding-top:12px"><span class="pill" style="background:#e8f5ec; color:#15803d; border-color:#c9e7d3">● Index ready</span>
+      <div style="margin-top:10px; border:1px solid var(--border); border-radius:10px; padding:10px; background:#fff; font-size:11px">⚖ Guidelines & Terms<br><span style="color:var(--muted)">Learning project only. Do not upload sensitive data. Files stored locally in chats/{id} + chroma_db/. Answers cite [1][2]…</span></div>
+    </div>
+  </aside>
+  <main class="center">
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:12px">
+        <div style="display:flex; gap:12px; align-items:center"><div style="width:30px; height:30px; border-radius:9999px; background:#10a37f; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700">O</div><div><div class="page-title" style="font-size:18px;">Helo</div><div style="font-family:Geist Mono,monospace; font-size:11px; color:var(--muted)">Next question → OpenAI · gpt-4o-mini</div></div></div>
+        <div style="display:flex; gap:8px"><span style="border:1px solid var(--border); border-radius:9999px; padding:6px 10px; font-size:12px">✎</span><span style="border:1px solid var(--border); border-radius:9999px; padding:6px 10px; font-size:12px">⇄ Compare</span></div>
+      </div>
+      <div style="margin-top:12px"><span style="font-size:10px; color:var(--muted)">Available Documents</span><br><span style="display:inline-flex; gap:6px; border:1px solid var(--border); border-radius:9999px; padding:4px 8px; font-size:11px; margin-top:6px">📄 test Shriram…pdf</span></div>
+      <div class="msg-user" style="margin-top:14px">Helo</div>
+      <div class="msg-ai" style="margin-top:10px"><span class="pill">⚡ Anthropic</span><p style="margin:8px 0 0">I could not find this in the uploaded documents.</p><div style="margin-top:8px"><span style="border:1px solid var(--border); border-radius:9999px; padding:4px 8px; font-size:11px">→ Use Anthropic</span></div></div>
+      <div class="msg-ai"><span class="pill">⚡ Gemini</span><p style="margin:8px 0 0">I could not find this in the uploaded documents.</p><div style="margin-top:8px"><span style="border:1px solid var(--border); border-radius:9999px; padding:4px 8px; font-size:11px">→ Use Gemini</span></div></div>
+      <details style="border:1px solid var(--border); border-radius:10px; padding:8px 12px; margin-top:10px"><summary style="font-size:12px; cursor:pointer">📄 Retrieved context</summary><p style="font-size:12px; color:var(--muted)">[1] test Shriram…pdf (chunk 2) …</p></details>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px; gap:12px"><span style="font-size:12px; color:var(--muted)">Next → <b>All 3 models</b></span><span style="border:1px solid var(--border); border-radius:9999px; padding:6px 12px; font-size:12px; flex-shrink:0">⇄ All 3</span></div>
+      <div class="input"><span>＋</span><span>Ask a question about your documents…</span><span style="margin-left:auto; background:#e5e2e1; border-radius:9999px; width:28px; height:28px; display:flex; align-items:center; justify-content:center">↑</span></div>
+    </div>
+  </main>
+  <aside class="right">
+    <div style="font-family:Geist Mono,monospace; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-bottom:10px">Model config</div>
+    <div class="right-card"><div style="font-size:12px; display:flex; justify-content:space-between"><span>Temperature</span><span style="color:var(--primary); font-weight:700">0.70</span></div><div style="height:4px; background:#e5e2e1; border-radius:9999px; margin-top:8px"><div style="width:70%; height:100%; background:var(--primary); border-radius:9999px"></div></div><div style="display:flex; justify-content:space-between; font-size:10px; color:var(--muted); margin-top:4px"><span>0.00</span><span>1.00</span></div></div>
+    <div class="right-card"><div style="font-size:12px;">Retrieved chunks (k)</div><div style="height:4px; background:#e5e2e1; border-radius:9999px; margin-top:8px"><div style="width:40%; height:100%; background:var(--primary); border-radius:9999px"></div></div></div>
+    <div style="font-family:Geist Mono,monospace; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin:16px 0 10px">Session statistics</div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px"><div style="background:#f6f3f2; border:1px solid var(--border); border-radius:10px; padding:10px"><div style="font-size:17px; font-weight:700; color:var(--primary)">4</div><div class="k">Chunks</div></div><div style="background:#f6f3f2; border:1px solid var(--border); border-radius:10px; padding:10px"><div style="font-size:17px; font-weight:700; color:var(--primary)">11</div><div class="k">Turns</div></div></div>
+  </aside>
+</div>
+</html>

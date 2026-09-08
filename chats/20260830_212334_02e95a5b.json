@@ -1,0 +1,60 @@
+{
+  "chat_id": "20260830_212334_02e95a5b",
+  "collection_name": "chat_20260830_212334_02e95a5b",
+  "created_at": "2026-08-30T21:23:34.438714",
+  "updated_at": "2026-09-08T19:39:57.385995",
+  "title": "helo",
+  "files": [
+    "test   sss  Shriram_GI_SHSI_Tele_MER_v3.pdf",
+    "Shriram_GI_SHSI_Tele_MER_v3 (1).pdf"
+  ],
+  "active_model": null,
+  "preferences": {},
+  "histories": {
+    "Anthropic": [
+      {
+        "role": "user",
+        "content": "helo",
+        "turn_id": "e74fccbd-db74-470b-a45a-8beddba7ade4",
+        "sources": "[1] **test   sss  Shriram_GI_SHSI_Tele_MER_v3.pdf** (chunk 18)\n\n|HIV|Ever tested HIV positvi e?|$<br>{ever teste<br>_<br>d hiv resp<br>_ _<br>onse}|${ever tested hiv detail}<br>_ _ _|\n|---|---|---|---|\n|**Recent Symptoms**<br>**(6–12 months)**|Unexplained weight loss?|$<br>{unexplaine<br>d_weight_r<br>esponse}|${unexplained_weight_detail}|\n|**Recent Symptoms**<br>**(6–12 months)**|Persistent fever?|$<br>{persistent_<br>response}|${persistent_detail}|\n|**Recent Symptoms**<br>**(6–12 months)**|Breathlessness on routne<br>actvity?|$<br>{breathiess<br>ness_respo<br>nse}|${breathiessness_detail}|\n|**Recent Symptoms**<br>**(6–12 months)**|Chest pain (exertonal or at<br>rest)?|$<br>{chest_pain<br>_response}|${chest_pain_detail}|\n|**Recent Symptoms**<br>**(6–12 months)**|Blood in stool or urine?|$<br>{blood_stoo<br>l_response}|${blood_stool_detail}|\n|**Recent Symptoms**<br>**(6–12 months)**|Persistent or severe<br>abdominal pain?|$<br>{persistent_<br>severe_resp<br>onse}|${persistent_severe_detail}|\n\n---\n\n[2] **test   sss  Shriram_GI_SHSI_Tele_MER_v3.pdf** (chunk 7)\n\nAny cancer or pre-cancerous $ ${any_cancer_detail}\nlesions? {any_cance\nCancer r_response}\nAny Lump?\n\nDisease of stomach, intestines, $ ${disease_of_stomach_detail}\nliver, gall bladder, pancreas, {disease_of\nGI / Liver / Kidney / kidney, bladder or urinary _stomach_r\nUrinary tract? esponse}\n\nProstate disease, fistula, piles, $ ${prostste_disease_detail}\ngenital conditions? {prostate_d\nGenitourinary isease_resp\n(Male/Female) onse}\n\nAny Thyroid disorder (Hypo / $ ${any_thyroid_disorder_detail}\nHyper) {any_thyroi\nThyroid d_disorder_\nresponse}\n\nGynecological disorders $ ${gynecological_detail}\n(fibroids, ovarian cysts, DUB)? {gynecologi\ncal_respons\ne}\n\nObstetric History $ ${obstretric_detail}\nFemale-Specific {obstretric_\nresponse}\n\nHistory of C-section or $ ${history_c_section_detail}\nhysterectomy? {history_c_s\nestion_resp\nonse}\n\nEver taken treatment or $ ${ever_taken_detail}\nadvised treatment for sub- {ever_taken\nSub-Fertility / fertility/infertility? _response}\nInfertility\n\n---\n\n[3] **test   sss  Shriram_GI_SHSI_Tele_MER_v3.pdf** (chunk 9)\n\n|Cancer|Any cancer or pre-cancerous<br>lesions?<br>Any Lump?|$<br>{any cance<br>_<br>r response}<br>_|${any cancer detail}<br>_ _|\n|---|---|---|---|\n|**GI / Liver / Kidney /**<br>**Urinary**|Disease of stomach, intestnes,<br>liver, gall bladder, pancreas,<br>kidney, bladder or urinary<br>tract?|$<br>{disease_of<br>_stomach_r<br>esponse}|${disease_of_stomach_detail}|\n|**Genitourinary**<br>**(Male/Female)**|Prostate disease, fstula, piles,<br>genital conditons?|$<br>{prostate_d<br>isease_resp<br>onse}|${prostste_disease_detail}|\n|**Thyroid**|Any Thyroid disorder (Hypo /<br>Hyper)|$<br>{any_thyroi<br>d_disorder_<br>response}|${any_thyroid_disorder_detail}|\n|**Female-Specifc**|Gynecological disorders<br>(fbroids, ovarian cysts, DUB)?|$<br>{gynecologi<br>cal_respons<br>e}|${gynecological_detail}|\n|**Female-Specifc**|Obstetric History|$<br>{obstretric_<br>response}|${obstretric_detail}|\n\n---\n\n[4] **test   sss  Shriram_GI_SHSI_Tele_MER_v3.pdf** (chunk 8)\n\nEver taken treatment or $ ${ever_taken_detail}\nadvised treatment for sub- {ever_taken\nSub-Fertility / fertility/infertility? _response}\nInfertility\n\nCataract or any eye/ENT $ ${cataract_detail}\ndiseases?Any Glasses? {cataract_re\nEye / ENT sponse}\n\nGeneral Insurance\nDocOnline",
+        "created_at": "2026-08-30T21:25:45.973007"
+      },
+      {
+        "role": "assistant",
+        "content": "I could not find this in the uploaded documents.",
+        "turn_id": "e74fccbd-db74-470b-a45a-8beddba7ade4",
+        "created_at": "2026-08-30T21:25:45.973013"
+      }
+    ],
+    "Gemini": [
+      {
+        "role": "user",
+        "content": "helo",
+        "turn_id": "e74fccbd-db74-470b-a45a-8beddba7ade4",
+        "sources": "[1] **test   sss  Shriram_GI_SHSI_Tele_MER_v3.pdf** (chunk 18)\n\n|HIV|Ever tested HIV positvi e?|$<br>{ever teste<br>_<br>d hiv resp<br>_ _<br>onse}|${ever tested hiv detail}<br>_ _ _|\n|---|---|---|---|\n|**Recent Symptoms**<br>**(6–12 months)**|Unexplained weight loss?|$<br>{unexplaine<br>d_weight_r<br>esponse}|${unexplained_weight_detail}|\n|**Recent Symptoms**<br>**(6–12 months)**|Persistent fever?|$<br>{persistent_<br>response}|${persistent_detail}|\n|**Recent Symptoms**<br>**(6–12 months)**|Breathlessness on routne<br>actvity?|$<br>{breathiess<br>ness_respo<br>nse}|${breathiessness_detail}|\n|**Recent Symptoms**<br>**(6–12 months)**|Chest pain (exertonal or at<br>rest)?|$<br>{chest_pain<br>_response}|${chest_pain_detail}|\n|**Recent Symptoms**<br>**(6–12 months)**|Blood in stool or urine?|$<br>{blood_stoo<br>l_response}|${blood_stool_detail}|\n|**Recent Symptoms**<br>**(6–12 months)**|Persistent or severe<br>abdominal pain?|$<br>{persistent_<br>severe_resp<br>onse}|${persistent_severe_detail}|\n\n---\n\n[2] **test   sss  Shriram_GI_SHSI_Tele_MER_v3.pdf** (chunk 7)\n\nAny cancer or pre-cancerous $ ${any_cancer_detail}\nlesions? {any_cance\nCancer r_response}\nAny Lump?\n\nDisease of stomach, intestines, $ ${disease_of_stomach_detail}\nliver, gall bladder, pancreas, {disease_of\nGI / Liver / Kidney / kidney, bladder or urinary _stomach_r\nUrinary tract? esponse}\n\nProstate disease, fistula, piles, $ ${prostste_disease_detail}\ngenital conditions? {prostate_d\nGenitourinary isease_resp\n(Male/Female) onse}\n\nAny Thyroid disorder (Hypo / $ ${any_thyroid_disorder_detail}\nHyper) {any_thyroi\nThyroid d_disorder_\nresponse}\n\nGynecological disorders $ ${gynecological_detail}\n(fibroids, ovarian cysts, DUB)? {gynecologi\ncal_respons\ne}\n\nObstetric History $ ${obstretric_detail}\nFemale-Specific {obstretric_\nresponse}\n\nHistory of C-section or $ ${history_c_section_detail}\nhysterectomy? {history_c_s\nestion_resp\nonse}\n\nEver taken treatment or $ ${ever_taken_detail}\nadvised treatment for sub- {ever_taken\nSub-Fertility / fertility/infertility? _response}\nInfertility\n\n---\n\n[3] **test   sss  Shriram_GI_SHSI_Tele_MER_v3.pdf** (chunk 9)\n\n|Cancer|Any cancer or pre-cancerous<br>lesions?<br>Any Lump?|$<br>{any cance<br>_<br>r response}<br>_|${any cancer detail}<br>_ _|\n|---|---|---|---|\n|**GI / Liver / Kidney /**<br>**Urinary**|Disease of stomach, intestnes,<br>liver, gall bladder, pancreas,<br>kidney, bladder or urinary<br>tract?|$<br>{disease_of<br>_stomach_r<br>esponse}|${disease_of_stomach_detail}|\n|**Genitourinary**<br>**(Male/Female)**|Prostate disease, fstula, piles,<br>genital conditons?|$<br>{prostate_d<br>isease_resp<br>onse}|${prostste_disease_detail}|\n|**Thyroid**|Any Thyroid disorder (Hypo /<br>Hyper)|$<br>{any_thyroi<br>d_disorder_<br>response}|${any_thyroid_disorder_detail}|\n|**Female-Specifc**|Gynecological disorders<br>(fbroids, ovarian cysts, DUB)?|$<br>{gynecologi<br>cal_respons<br>e}|${gynecological_detail}|\n|**Female-Specifc**|Obstetric History|$<br>{obstretric_<br>response}|${obstretric_detail}|\n\n---\n\n[4] **test   sss  Shriram_GI_SHSI_Tele_MER_v3.pdf** (chunk 8)\n\nEver taken treatment or $ ${ever_taken_detail}\nadvised treatment for sub- {ever_taken\nSub-Fertility / fertility/infertility? _response}\nInfertility\n\nCataract or any eye/ENT $ ${cataract_detail}\ndiseases?Any Glasses? {cataract_re\nEye / ENT sponse}\n\nGeneral Insurance\nDocOnline",
+        "created_at": "2026-08-30T21:25:45.973017"
+      },
+      {
+        "role": "assistant",
+        "content": "I could not find this in the uploaded documents.",
+        "turn_id": "e74fccbd-db74-470b-a45a-8beddba7ade4",
+        "created_at": "2026-08-30T21:25:45.973019"
+      }
+    ],
+    "OpenAI": [
+      {
+        "role": "user",
+        "content": "helo",
+        "turn_id": "e74fccbd-db74-470b-a45a-8beddba7ade4",
+        "sources": "[1] **test   sss  Shriram_GI_SHSI_Tele_MER_v3.pdf** (chunk 18)\n\n|HIV|Ever tested HIV positvi e?|$<br>{ever teste<br>_<br>d hiv resp<br>_ _<br>onse}|${ever tested hiv detail}<br>_ _ _|\n|---|---|---|---|\n|**Recent Symptoms**<br>**(6–12 months)**|Unexplained weight loss?|$<br>{unexplaine<br>d_weight_r<br>esponse}|${unexplained_weight_detail}|\n|**Recent Symptoms**<br>**(6–12 months)**|Persistent fever?|$<br>{persistent_<br>response}|${persistent_detail}|\n|**Recent Symptoms**<br>**(6–12 months)**|Breathlessness on routne<br>actvity?|$<br>{breathiess<br>ness_respo<br>nse}|${breathiessness_detail}|\n|**Recent Symptoms**<br>**(6–12 months)**|Chest pain (exertonal or at<br>rest)?|$<br>{chest_pain<br>_response}|${chest_pain_detail}|\n|**Recent Symptoms**<br>**(6–12 months)**|Blood in stool or urine?|$<br>{blood_stoo<br>l_response}|${blood_stool_detail}|\n|**Recent Symptoms**<br>**(6–12 months)**|Persistent or severe<br>abdominal pain?|$<br>{persistent_<br>severe_resp<br>onse}|${persistent_severe_detail}|\n\n---\n\n[2] **test   sss  Shriram_GI_SHSI_Tele_MER_v3.pdf** (chunk 7)\n\nAny cancer or pre-cancerous $ ${any_cancer_detail}\nlesions? {any_cance\nCancer r_response}\nAny Lump?\n\nDisease of stomach, intestines, $ ${disease_of_stomach_detail}\nliver, gall bladder, pancreas, {disease_of\nGI / Liver / Kidney / kidney, bladder or urinary _stomach_r\nUrinary tract? esponse}\n\nProstate disease, fistula, piles, $ ${prostste_disease_detail}\ngenital conditions? {prostate_d\nGenitourinary isease_resp\n(Male/Female) onse}\n\nAny Thyroid disorder (Hypo / $ ${any_thyroid_disorder_detail}\nHyper) {any_thyroi\nThyroid d_disorder_\nresponse}\n\nGynecological disorders $ ${gynecological_detail}\n(fibroids, ovarian cysts, DUB)? {gynecologi\ncal_respons\ne}\n\nObstetric History $ ${obstretric_detail}\nFemale-Specific {obstretric_\nresponse}\n\nHistory of C-section or $ ${history_c_section_detail}\nhysterectomy? {history_c_s\nestion_resp\nonse}\n\nEver taken treatment or $ ${ever_taken_detail}\nadvised treatment for sub- {ever_taken\nSub-Fertility / fertility/infertility? _response}\nInfertility\n\n---\n\n[3] **test   sss  Shriram_GI_SHSI_Tele_MER_v3.pdf** (chunk 9)\n\n|Cancer|Any cancer or pre-cancerous<br>lesions?<br>Any Lump?|$<br>{any cance<br>_<br>r response}<br>_|${any cancer detail}<br>_ _|\n|---|---|---|---|\n|**GI / Liver / Kidney /**<br>**Urinary**|Disease of stomach, intestnes,<br>liver, gall bladder, pancreas,<br>kidney, bladder or urinary<br>tract?|$<br>{disease_of<br>_stomach_r<br>esponse}|${disease_of_stomach_detail}|\n|**Genitourinary**<br>**(Male/Female)**|Prostate disease, fstula, piles,<br>genital conditons?|$<br>{prostate_d<br>isease_resp<br>onse}|${prostste_disease_detail}|\n|**Thyroid**|Any Thyroid disorder (Hypo /<br>Hyper)|$<br>{any_thyroi<br>d_disorder_<br>response}|${any_thyroid_disorder_detail}|\n|**Female-Specifc**|Gynecological disorders<br>(fbroids, ovarian cysts, DUB)?|$<br>{gynecologi<br>cal_respons<br>e}|${gynecological_detail}|\n|**Female-Specifc**|Obstetric History|$<br>{obstretric_<br>response}|${obstretric_detail}|\n\n---\n\n[4] **test   sss  Shriram_GI_SHSI_Tele_MER_v3.pdf** (chunk 8)\n\nEver taken treatment or $ ${ever_taken_detail}\nadvised treatment for sub- {ever_taken\nSub-Fertility / fertility/infertility? _response}\nInfertility\n\nCataract or any eye/ENT $ ${cataract_detail}\ndiseases?Any Glasses? {cataract_re\nEye / ENT sponse}\n\nGeneral Insurance\nDocOnline",
+        "created_at": "2026-08-30T21:25:45.973021"
+      },
+      {
+        "role": "assistant",
+        "content": "I could not find this in the uploaded documents.",
+        "turn_id": "e74fccbd-db74-470b-a45a-8beddba7ade4",
+        "created_at": "2026-08-30T21:25:45.973023"
+      }
+    ]
+  }
+}

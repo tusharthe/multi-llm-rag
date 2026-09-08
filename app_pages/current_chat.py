@@ -87,7 +87,7 @@ upload_status_container = None
 
 with col_chat:
 
-    chat_container = st.container(height=800, border=True, key="my_chat_box", autoscroll=True)
+    chat_container = st.container(border=True)
 
     with chat_container:
         head_left, head_right = st.columns(
@@ -216,49 +216,51 @@ with col_chat:
             )
 
         st.html('<div style="height:12px;"></div>')
+        transcript_box = st.container(height=420, border=False, key="my_chat_box", autoscroll=True)
+        with transcript_box:
 
-        if not turn_groups:
-            empty_state(
-                "forum",
-                "No messages yet",
-                "Ask a question below and the answer will appear here.",
-            )
+            if not turn_groups:
+                empty_state(
+                    "forum",
+                    "No messages yet",
+                    "Ask a question below and the answer will appear here.",
+                )
 
-        for group in turn_groups:
-            if group["query"]:
-                st.html(f'<div class="msg-user">{html.escape(group["query"])}</div>')
+            for group in turn_groups:
+                if group["query"]:
+                    st.html(f'<div class="msg-user">{html.escape(group["query"])}</div>')
 
-            for model, answer in group["answers"].items():
-                with st.container(border=True):
-                    st.html(
-                        f"""
-                        <div style="display:flex; align-items:center; gap:8px;
-                                    margin-bottom:2px;">
-                            <span class="pill pill-primary">
-                                {icon("bolt", 13)} {model}
-                            </span>
-                        </div>
-                        """
-                    )
-                    st.markdown(answer)
-                    is_active = (active_model == model)
-                    if st.button(
-                        "Active" if is_active else f"Use {model}",
-                        key=f"route_{group['turn_id']}_{model}",
-                        icon=":material/check:" if is_active else ":material/arrow_forward:",
-                        type="primary" if is_active else "secondary",
-                        width="content",
-                        disabled=is_active,
-                        help=f"Next question will be answered by {model}" if not is_active else f"{model} is active",
+                for model, answer in group["answers"].items():
+                    with st.container(border=True):
+                        st.html(
+                            f"""
+                            <div style="display:flex; align-items:center; gap:8px;
+                                        margin-bottom:2px;">
+                                <span class="pill pill-primary">
+                                    {icon("bolt", 13)} {model}
+                                </span>
+                            </div>
+                            """
+                        )
+                        st.markdown(answer)
+                        is_active = (active_model == model)
+                        if st.button(
+                            "Active" if is_active else f"Use {model}",
+                            key=f"route_{group['turn_id']}_{model}",
+                            icon=":material/check:" if is_active else ":material/arrow_forward:",
+                            type="primary" if is_active else "secondary",
+                            width="content",
+                            disabled=is_active,
+                            help=f"Next question will be answered by {model}" if not is_active else f"{model} is active",
+                        ):
+                            chat.set_active_model(chat_id, model)
+                            st.rerun()
+
+                if group.get("sources"):
+                    with st.expander(
+                        "Retrieved context", icon=":material/find_in_page:"
                     ):
-                        chat.set_active_model(chat_id, model)
-                        st.rerun()
-
-            if group.get("sources"):
-                with st.expander(
-                    "Retrieved context", icon=":material/find_in_page:"
-                ):
-                    st.markdown(group["sources"])
+                        st.markdown(group["sources"])
 
         # --- routing bar: which model answers next ---
         r1, r2 = st.columns([3, 1], vertical_alignment="center")
@@ -276,13 +278,13 @@ with col_chat:
                 chat.set_active_model(chat_id, None)
                 st.rerun()
 
-        thinking_placeholder = st.empty()
-    prompt = st.chat_input(
-        "Ask a question about your documents…",
+            thinking_placeholder = st.empty()
+        prompt = st.chat_input(
+            "Ask a question about your documents…",
         accept_audio=False,
         accept_file="multiple",
         file_type=["pdf", "txt", "md", "docx"],
-    )
+        )
 
 with col_config:
     section_label("Model config")
