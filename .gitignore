@@ -24,3 +24,8 @@ venv/
 .DS_Store
 .vscode/
 .idea/
+
+# JS tooling (docx generator only)
+node_modules/
+package.json
+package-lock.json
