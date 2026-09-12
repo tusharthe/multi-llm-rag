@@ -1,10 +1,11 @@
 """Analytics dashboard -- activity aggregated across every saved chat.
 
 Counts here are derived live from the ``chats/*.json`` records, so they reflect
-real usage rather than mockup numbers. Latency and token columns stay blank
-until per-turn instrumentation is added around the ``llm.invoke`` calls in
-``graph.py`` (CLAUDE.md section 11); a provider that omits ``usage_metadata``
-must render a placeholder, never crash.
+real usage rather than mockup numbers. Latency/tokens come from the ``stats``
+dict stamped on each assistant turn by ``graph.run_model`` (CLAUDE.md
+section 11); turns recorded before instrumentation, or providers that omit
+``usage_metadata`` (Ollama), simply contribute no sample and render "—",
+never crash.
 """
 
 from __future__ import annotations
@@ -33,6 +34,13 @@ def collect_stats() -> dict:
     documents: set[str] = set()
     docs_per_chat: Counter[str] = Counter()
     total_queries = 0
+    # Per-turn instrumentation samples (graph.run_model stamps stats on each
+    # assistant turn). Old records lack "stats" entirely -- .get() chains
+    # below treat that as "no sample", never crash.
+    latencies: list[float] = []
+    latency_by_model: dict[str, list[float]] = {}
+    tokens_in = 0
+    tokens_out = 0
 
     for summary in chat.list_chats():
         try:
@@ -54,6 +62,18 @@ def collect_stats() -> dict:
         for label, turns in histories.items():
             answers_per_model[label] += sum(1 for t in turns if t["role"] == "assistant")
             per_model_user_counts.append(sum(1 for t in turns if t["role"] == "user"))
+            for t in turns:
+                if t.get("role") != "assistant":
+                    continue
+                st_ = t.get("stats") or {}
+                lat = st_.get("latency_s")
+                if isinstance(lat, (int, float)):
+                    latencies.append(float(lat))
+                    latency_by_model.setdefault(label, []).append(float(lat))
+                if isinstance(st_.get("input_tokens"), int):
+                    tokens_in += st_["input_tokens"]
+                if isinstance(st_.get("output_tokens"), int):
+                    tokens_out += st_["output_tokens"]
 
         total_queries += max(per_model_user_counts, default=0)
 
@@ -82,6 +102,13 @@ def collect_stats() -> dict:
         "queries_per_day": dict(queries_per_day),
         "answers_per_model": dict(answers_per_model),
         "docs_per_chat": dict(docs_per_chat),
+        "avg_latency_s": (sum(latencies) / len(latencies)) if latencies else None,
+        "latency_samples": len(latencies),
+        "latency_by_model": {
+            label: round(sum(v) / len(v), 2) for label, v in latency_by_model.items() if v
+        },
+        "tokens_in": tokens_in,
+        "tokens_out": tokens_out,
     }
 
 
@@ -102,11 +129,18 @@ col_a, col_b, col_c, col_d = st.columns(4, gap="medium")
 col_a.metric("Documents indexed", len(stats["documents"]), border=True)
 col_b.metric("Total queries", stats["total_queries"], border=True)
 col_c.metric("Chats", stats["chat_count"], border=True)
+avg_lat = stats["avg_latency_s"]
 col_d.metric(
     "Avg latency",
-    "—",
+    f"{avg_lat:.1f} s" if avg_lat is not None else "—",
     border=True,
-    help="Needs per-turn instrumentation around llm.invoke in graph.py.",
+    help=(
+        f"Across {stats['latency_samples']} timed answers. "
+        "Turns from before instrumentation, or providers without "
+        "usage data, are excluded."
+        if avg_lat is not None
+        else "No timed answers yet -- ask a question first."
+    ),
 )
 
 st.html('<div style="height:8px;"></div>')
@@ -139,6 +173,28 @@ with split_col:
         st.bar_chart(frame, height=260, horizontal=True)
     else:
         st.caption("No answers recorded yet.")
+
+# ------------------------------------------------- latency & tokens by model --
+
+section_label("Latency & tokens by model")
+
+lat_by_model = stats["latency_by_model"]
+if lat_by_model:
+    table = pd.DataFrame(
+        {
+            "Model": list(lat_by_model),
+            "Avg latency (s)": list(lat_by_model.values()),
+            "Answers": [stats["answers_per_model"].get(m, 0) for m in lat_by_model],
+        }
+    ).sort_values("Avg latency (s)")
+    st.dataframe(table, hide_index=True)
+    st.caption(
+        f"Total tokens observed: {stats['tokens_in']:,} in / "
+        f"{stats['tokens_out']:,} out. Providers without usage data "
+        "(e.g. local Ollama) contribute latency only."
+    )
+else:
+    st.caption("No timed answers yet -- latency appears after the next question.")
 
 # -------------------------------------------------------------------- table --
 

@@ -210,16 +210,21 @@ def list_chats() -> list[dict[str, Any]]:
     return items
 
 
-def record_compare_turn(chat_id, query, answers, docs=None):
+def record_compare_turn(chat_id, query, answers, docs=None, stats=None):
     # histories: {
     #     "OpenAI":    [{role, content, turn_id, created_at}, ...],
     #     "Anthropic": [...],
     #     "Gemini":    [...],
     # }
+    # stats: {model_label: {latency_s, input_tokens, output_tokens,
+    # total_tokens}} from graph.final_state["stats"]; stamped onto the
+    # assistant turn so the Analytics page can aggregate it. None-safe:
+    # old callers pass nothing, old records simply lack the key.
     record = load_chat(chat_id)
     histories = record.get("histories", {})
     turn_id = str(uuid.uuid4())
     sources = format_sources(docs) if docs else None
+    stats = stats or {}
 
     for model, answer in answers.items():
         histories.setdefault(model, []).extend([{
@@ -232,6 +237,7 @@ def record_compare_turn(chat_id, query, answers, docs=None):
             'role': 'assistant',
             'content': answer,
             'turn_id': turn_id,
+            'stats': stats.get(model),
             'created_at':  datetime.now().isoformat()
         }])
 
@@ -241,11 +247,12 @@ def record_compare_turn(chat_id, query, answers, docs=None):
     return record
 
 
-def record_continue_turn(chat_id, model, query, answer, docs=None):
+def record_continue_turn(chat_id, model, query, answer, docs=None, stats=None):
     record = load_chat(chat_id)
     turn_id = str(uuid.uuid4())
     histories = record.get("histories", {})
     sources = format_sources(docs) if docs else None
+    stat = (stats or {}).get(model)
     histories.setdefault(model, []).extend([{
         'role': 'user',
         'content': query,
@@ -256,6 +263,7 @@ def record_continue_turn(chat_id, model, query, answer, docs=None):
         'role': 'assistant',
         'content': answer,
         'turn_id': turn_id,
+        'stats': stat,
         'created_at':  datetime.now().isoformat()
     }])
 

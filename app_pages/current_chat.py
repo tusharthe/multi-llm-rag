@@ -186,6 +186,7 @@ with col_chat:
                                 last_query,
                                 final_state_cmp["answers"],
                                 docs=final_state_cmp.get("docs"),
+                                stats=final_state_cmp.get("stats"),
                             )
                         except Exception:
                             logger.exception("Smart Compare re-run failed")
@@ -347,7 +348,8 @@ def process_text(text: str, chat_id: str):
             final_state = graph.invoke({"query": text, "collection": collection})
             st.write(f"Generating answers ({len(final_state.get('answers', {}))} models)…")
             chat.record_compare_turn(
-                chat_id, text, final_state["answers"], docs=final_state.get("docs"))
+                chat_id, text, final_state["answers"], docs=final_state.get("docs"),
+                stats=final_state.get("stats"))
         else:
             st.write(f"Generating answer with {active_model}…")
             final_state = graph.invoke({
@@ -360,10 +362,24 @@ def process_text(text: str, chat_id: str):
                     break
 
             if ans is None:
-                logger.warning("No answer found for model %s", active_model)
+                # Model absent from the registry at runtime (router hit
+                # [END]): record nothing. Saving None would poison the
+                # transcript (None has no .get/.strip) and the analytics
+                # counters downstream.
+                logger.error(
+                    "No answer found for model %s -- turn NOT recorded",
+                    active_model)
+                st.error(
+                    f"{active_model} is not available right now -- "
+                    "question was not saved. Check Model settings / logs.",
+                    icon=":material/error:",
+                )
+                status.update(label="Model unavailable", state="error", expanded=False)
+                return final_state["answers"]
 
             chat.record_continue_turn(
-                chat_id, active_model, text, ans, docs=final_state.get("docs"))
+                chat_id, active_model, text, ans, docs=final_state.get("docs"),
+                stats=final_state.get("stats"))
         status.update(label="Answer ready", state="complete", expanded=False)
 
     return final_state["answers"]

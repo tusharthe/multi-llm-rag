@@ -28,8 +28,13 @@
 - **Do NOT** try to route via a dict like `{"All": [...], "Gemini": "gemini_node"}` — a list value under a string key is fine, but returning a *list* as the router's own dict key crashes with `TypeError: unhashable type: 'list'`. Keep the router returning a plain list of target node names; skip the mapping dict entirely.
 - **Single-model "Continue" calls MUST go through `graph.py`**, not `models.py`/`rag.py` directly from `app_pages/*.py`. Pass `active_model` in the state dict passed to `graph.invoke(...)`; the router fans out to 1 node instead of 3. Keeps orchestration centralized — UI/page code should never call `models.get_models()` or `rag.get_retriever()` on its own.
 
-## Known Open Bugs (as of last session)
-- `current_chat.py` Continue-mode edge case: if `active_model` names a model absent from `models.keys()` at runtime, the router returns `[END]`, `answers` is empty, the `ans is None` guard fires and `None` is saved to history. Consider skipping `record_continue_turn` entirely when `ans is None`.
+## Known Open Bugs
+- (none) `ans is None` edge FIXED: `process_text` returns early with an
+  `st.error` + error status instead of recording `None`. S11 DONE:
+  `run_model` stamps `{latency_s, input/output/total_tokens}` per model
+  into `final_state["stats"]` (None-safe for Ollama); `record_*` persist
+  it on assistant turns; Analytics aggregates avg latency + per-model
+  table, placeholder when no samples.
 
 ## Agreed UX Redesign — COMPLETE (see LEARNING.md items 12, 14-17)
 - **Merged transcript:** `current_chat.py` renders `chat.group_turn_ids(record)` — user question ONCE per group, each answer with its model pill. Header shows "Next → {model} / All 3". Turns stat uses `len(turn_groups)`. Pill buttons (`route_{turn_id}_{model}`) set `active_model` for NEXT question; All 3 button sets `None`.

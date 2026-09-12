@@ -450,3 +450,16 @@ written by Claude before Learning Mode started. Rewriting both from scratch,
 this time user-authored with Claude teaching only. Prior commits (6ed9125,
 d5b0bb1) remain in git history for reference if needed, but are not the
 starting point going forward.
+
+### Per-turn LLM instrumentation + ans-is-None fix (2026-09-12)
+- `graph.run_model` times each `llm.invoke` (`time.perf_counter`) and reads
+  `resp.usage_metadata` -> `{latency_s, input_tokens, output_tokens,
+  total_tokens}` (None fields when the provider omits it, e.g. Ollama).
+  Merged via a new `stats` reducer field into `final_state["stats"]`.
+- `record_compare_turn` / `record_continue_turn` take `stats=` and stamp the
+  per-model dict on the assistant turn; all 4 UI call sites pass it through.
+- Analytics `collect_stats` aggregates avg latency, per-model latency and
+  token totals; pre-instrumentation turns contribute no sample and render
+  a placeholder. CLAUDE.md section 11 complete.
+- Bug fix: `process_text` Continue branch returns early with `st.error` when
+  `ans is None` (model absent at runtime) instead of recording `None`.

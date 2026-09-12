@@ -175,7 +175,8 @@ if prompt:
                 st.write(f"Generating answers ({len(final_state.get('answers', {}))} models)…")
                 chat.record_compare_turn(
                     chat_id, prompt.text, final_state["answers"],
-                    docs=final_state.get("docs"))
+                    docs=final_state.get("docs"),
+                    stats=final_state.get("stats"))
                 status.update(label="Answer ready", state="complete", expanded=False)
         # Auto-rename on first message (one time)
         try:

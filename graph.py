@@ -1,5 +1,6 @@
 from logger import logger
 import operator
+import time
 from typing import Annotated, TypedDict, List, Dict, Literal
 from langchain_core.documents import Document
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -21,6 +22,10 @@ class RetrievalState(TypedDict, total=False):
     docs: List[Document]        # retrieved context
     # Reducer: merge dicts when multiple nodes update `answers` in parallel
     answers: Annotated[Dict[str, str], operator.or_]
+    # Same fan-in for per-model instrumentation: {label: stat-dict} where a
+    # stat-dict is {latency_s, input_tokens, output_tokens, total_tokens}.
+    # Token fields are None when the provider omits usage_metadata (Ollama).
+    stats: Annotated[Dict[str, dict], operator.or_]
     active_model: Literal["All", "OpenAI", "Anthropic", "Gemini", None]
     collection: str
 
@@ -62,6 +67,8 @@ def run_model(state: RetrievalState, model_label: str) -> RetrievalState:
         HumanMessage(content=human_message),
     ]
 
+    t0 = time.perf_counter()
+
     try:
         resp = llm.invoke(messages)
 
@@ -74,12 +81,29 @@ def run_model(state: RetrievalState, model_label: str) -> RetrievalState:
         logger.info("[%s] answer received (%s chars)",
                     model_label, answer)
 
+        # LangChain's standard usage_metadata ({input_tokens, output_tokens,
+        # total_tokens}); None for providers that don't populate it (Ollama).
+        meta = getattr(resp, "usage_metadata", None) or {}
+        stat = {
+            "latency_s": round(time.perf_counter() - t0, 3),
+            "input_tokens": meta.get("input_tokens"),
+            "output_tokens": meta.get("output_tokens"),
+            "total_tokens": meta.get("total_tokens"),
+        }
+
     except Exception:
         logger.exception("Error while invoking %s model", model_label)
         answer = f"[{model_label} error] Check logs for details."
+        stat = {
+            "latency_s": round(time.perf_counter() - t0, 3),
+            "input_tokens": None,
+            "output_tokens": None,
+            "total_tokens": None,
+        }
 
     return {
         "answers": {model_label: answer},
+        "stats": {model_label: stat},
     }
 
 
