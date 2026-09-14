@@ -96,8 +96,8 @@ def normalize_for_rag(text: str) -> str:
 if __name__ == "__main__":
     logger.info("Running ingestion.py directly!")
 
-    chunks = load_and_split(
-        './docs/IIT Patna AIML Project Guidelines (1) (1).pdf')
+    # Drop any PDF in docs/ as sample.pdf to smoke-test the splitter.
+    chunks = load_and_split('./docs/sample.pdf')
 
     logger.info("Produced %d chunks", len(chunks))
 

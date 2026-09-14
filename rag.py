@@ -73,7 +73,7 @@ def clear_index(collection_name: str) -> None:
 
 if __name__ == "__main__":
 
-    pdf_path = str(DOCS_DIR / "IIT Patna AIML Project Guidelines (1) (1).pdf")
+    pdf_path = str(DOCS_DIR / "sample.pdf")  # drop any PDF here to smoke-test
     clear_index('chat_test')
 
     chunks = load_and_split(pdf_path)
