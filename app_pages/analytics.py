@@ -2,8 +2,8 @@
 
 Counts here are derived live from the ``chats/*.json`` records, so they reflect
 real usage rather than mockup numbers. Latency/tokens come from the ``stats``
-dict stamped on each assistant turn by ``graph.run_model`` (CLAUDE.md
-section 11); turns recorded before instrumentation, or providers that omit
+dict stamped on each assistant turn by ``graph.run_model``; turns recorded
+before instrumentation, or providers that omit
 ``usage_metadata`` (Ollama), simply contribute no sample and render "—",
 never crash.
 """

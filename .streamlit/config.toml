@@ -1,5 +1,5 @@
 [theme]
-# Tokens mirror the Stitch design export (rag_hub_core/DESIGN.md).
+# Shared design tokens for the app theme.
 base = "dark"
 
 primaryColor = "#d92d34"

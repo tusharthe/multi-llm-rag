@@ -1,6 +1,6 @@
 # RAG From Scratch — production image (cloud APIs, USE_OLLAMA=false).
 # Build: docker build -t multi-llm-rag .
-# Run:   docker run -p 127.0.0.1:8501:8501 --env-file .env.prod -v ... (see chat)
+# Run:   docker run -p 127.0.0.1:8501:8501 --env-file .env.prod multi-llm-rag
 
 FROM python:3.11-slim
 

@@ -3,7 +3,7 @@
 Generation parameters are session-level: one set applies to whichever models
 get called, threaded through ``models.get_models()`` at call time. Chunk size
 is different -- it is a per-chat BUILD-TIME value, since chunks are baked into
-the stored vectors and cannot be changed retroactively (CLAUDE.md section 2).
+the stored vectors and cannot be changed retroactively.
 """
 
 from __future__ import annotations
@@ -39,7 +39,7 @@ if config_error:
 else:
     use_ollama = cfg.use_ollama
     st.caption(
-        "Running against local Ollama stand-ins (`USE_OLLAMA=true`)."
+        "Running against local Ollama models (`USE_OLLAMA=true`)."
         if use_ollama
         else "Running against the cloud providers (`USE_OLLAMA=false`)."
     )

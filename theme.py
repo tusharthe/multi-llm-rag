@@ -71,7 +71,7 @@ MUTED = "#a8a29e"
 
 #: Per-model accent used for the avatar chip in Arena / Continue mode.
 #: The three labels are fixed by the brief -- OpenAI / Anthropic / Gemini --
-#: regardless of whether the backend is a cloud provider or an Ollama stand-in.
+#: regardless of whether the backend is a cloud provider or a local Ollama model.
 MODEL_ACCENTS = {
     "OpenAI": "#10a37f",
     "Anthropic": "#d97757",

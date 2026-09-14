@@ -4,11 +4,8 @@ Retrieval runs ONCE per question and every model receives the identical
 context, which is what makes the comparison fair.
 
 Note on "Mark as preferred": it is a plain human click, recorded per turn. The
-app never scores, ranks or computes a winner -- automated judging is explicitly
-out of scope (CLAUDE.md), so the Stitch mockup's auto "WINNER" badge is
-deliberately not reproduced here.
-
-UI only for now: no graph invocation is wired up yet.
+app never scores, ranks or computes a winner -- automated judging is
+deliberately out of scope and not reproduced here.
 """
 
 from __future__ import annotations
@@ -22,7 +19,7 @@ from logger import logger
 from theme import MODEL_IDS, icon
 
 #: Fixed columns. The academic deliverable is always OpenAI + Anthropic +
-#: Gemini, whether the backend is a cloud provider or an Ollama stand-in.
+#: Gemini, whether the backend is a cloud provider or a local Ollama model.
 MODEL_LABELS = list(MODEL_IDS)
 
 chat_id = st.session_state["current_chat_id"]

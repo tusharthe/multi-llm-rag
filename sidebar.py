@@ -3,8 +3,8 @@
 Rendered once per run from ``app.py`` -- before ``nav.run()`` -- so individual
 pages never build their own sidebar.
 
-Layout follows the Stitch mockup: brand block, new-chat action, menu nav,
-recent chats, knowledge-source uploader and an index status footer.
+Layout: brand block, new-chat action, menu nav, knowledge-source uploader
+and an index status footer.
 """
 
 from __future__ import annotations
