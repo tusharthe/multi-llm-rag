@@ -1,0 +1,21 @@
+# Caddy reverse proxy: TLS + password gate in front of Streamlit.
+# Install:  sudo apt install caddy   (or: sudo dnf install caddy)
+# Password: caddy hash-password --plaintext 'YOUR-LONG-RANDOM-PASSWORD'
+#           then paste the hash below and: sudo systemctl reload caddy
+# File:     /etc/caddy/Caddyfile (this file is a template — keep the real
+#           one on the server; the hash is a secret, don't commit it).
+
+# --- replace with your domain ---
+rag.example.com {
+	# Public visitors must log in before touching the app (protects API credits).
+	basicauth {
+		appuser PASTE_HASH_HERE
+	}
+
+	# PDFs can be large — allow e.g. 50 MB uploads.
+	request_body {
+		max_size 50MB
+	}
+
+	reverse_proxy 127.0.0.1:8501
+}

@@ -1,0 +1,6 @@
+# System packages for Streamlit Community Cloud (apt).
+# rapidocr pulls opencv-python (needs libGL/glib) and onnxruntime (needs
+# libgomp) — without these the import fails on Debian with missing .so errors.
+libgomp1
+libgl1
+libglib2.0-0

@@ -1,0 +1,25 @@
+# Secrets — keys travel via -e / --env-file at runtime, never in the image.
+.env
+.env.*
+
+# Stateful data — lives in Docker volumes on the server, not the image.
+chats/
+docs/
+chroma_db/
+logs/
+store/
+
+# Python / envs / caches.
+__pycache__/
+*.pyc
+.venv/
+venv/
+uv-cache/
+
+# VCS / editors / misc local-only.
+.git/
+.vscode/
+.idea/
+.DS_Store
+.serena/
+node_modules/

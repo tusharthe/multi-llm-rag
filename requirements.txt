@@ -1,3 +1,7 @@
+# Streamlit Community Cloud installs via pip from this file.
+# Mirrors pyproject.toml (plus langchain-text-splitters, imported by
+# ingestion.py). Transitive deps resolve on Linux at install time.
+
 streamlit
 langchain
 langgraph
@@ -7,6 +11,11 @@ langchain-anthropic
 langchain-google-genai
 langchain-chroma
 langchain-community
+langchain-text-splitters
 pypdf
 docx2txt
 python-dotenv
+pymupdf>=1.28.0
+rapidocr>=3.9.1
+rapidocr-onnxruntime>=1.4.4
+ftfy>=6.3.1
