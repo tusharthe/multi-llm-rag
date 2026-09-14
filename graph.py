@@ -35,11 +35,65 @@ def retrieve(state: RetrievalState) -> RetrievalState:
 
     logger.debug("retrieve node running | state keys=%s", list(state.keys()))
 
-    docs = get_retriever(collection_name=state["collection"]).invoke(query)
+    try:
+        docs = get_retriever(collection_name=state["collection"]).invoke(query)
+    except Exception as exc:
+        # Embeddings also hit the provider (OpenAI when USE_OLLAMA=false),
+        # so a 429 here means "no credits" too. Log fully, let the UI
+        # handler show the friendly message — don't swallow into answers.
+        logger.exception("Retrieval failed for query: %s", query)
+        raise RuntimeError(_friendly_model_error(exc, "Retrieval")) from exc
 
     logger.info("Retrieved %d chunks for query: %s", len(docs), query)
 
     return {"docs": docs}
+
+
+def _friendly_model_error(exc: Exception, model_label: str) -> str:
+    """Turn a raw provider exception into a short user-facing message.
+
+    The full traceback still goes to the logs via logger.exception at the
+    call site — this is only what the user sees in the chat transcript.
+    """
+    raw = f"{type(exc).__name__}: {exc}"
+    lowered = raw.lower()
+    if "429" in lowered or "no credits" in lowered or "insufficient_quota" in lowered:
+        return (
+            f"{model_label} is out of credits/quota (429). "
+            "Add credits to the provider account or switch to local Ollama "
+            "(USE_OLLAMA=true) and retry."
+        )
+    if "rate limit" in lowered or "ratelimit" in lowered or "too many requests" in lowered:
+        return f"{model_label} is rate-limited right now. Wait a bit and retry."
+    if "auth" in lowered or "api key" in lowered or "apikey" in lowered or "401" in lowered or "403" in lowered:
+        return f"{model_label} rejected the API key. Check the key in .env."
+    if "connection" in lowered or "connect" in lowered or "timeout" in lowered or "ollama" in lowered:
+        return f"Could not reach {model_label}. Check network / Ollama is running."
+    # Fallback: first line only, truncated so a huge HTML error page
+    # doesn't end up in the transcript.
+    first_line = str(exc).splitlines()[0] if str(exc).strip() else type(exc).__name__
+    return f"{model_label} failed: {first_line[:300]}"
+
+
+def _content_to_text(resp) -> str:
+    """Extract plain text from a LangChain chat response.
+
+    Anthropic/Gemini can return ``content`` as a list of blocks, not a str.
+    """
+    content = getattr(resp, "content", resp)
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for block in content:
+            if isinstance(block, str):
+                parts.append(block)
+            elif isinstance(block, dict):
+                parts.append(block.get("text", str(block)))
+            else:
+                parts.append(getattr(block, "text", str(block)))
+        return "".join(parts)
+    return str(content)
 
 
 def run_model(state: RetrievalState, model_label: str) -> RetrievalState:
@@ -74,12 +128,10 @@ def run_model(state: RetrievalState, model_label: str) -> RetrievalState:
 
         logger.debug("[%s] raw response: %s", model_label, resp)
 
-        answer = getattr(resp, "content", str(resp))
+        answer = _content_to_text(resp)
 
         logger.info("[%s] answer received (%d chars)",
                     model_label, len(answer))
-        logger.info("[%s] answer received (%s chars)",
-                    model_label, answer)
 
         # LangChain's standard usage_metadata ({input_tokens, output_tokens,
         # total_tokens}); None for providers that don't populate it (Ollama).
@@ -91,14 +143,16 @@ def run_model(state: RetrievalState, model_label: str) -> RetrievalState:
             "total_tokens": meta.get("total_tokens"),
         }
 
-    except Exception:
+    except Exception as exc:
         logger.exception("Error while invoking %s model", model_label)
-        answer = f"[{model_label} error] Check logs for details."
+        friendly = _friendly_model_error(exc, model_label)
+        answer = f"⚠️ [{model_label} error] {friendly} (details in logs)."
         stat = {
             "latency_s": round(time.perf_counter() - t0, 3),
             "input_tokens": None,
             "output_tokens": None,
             "total_tokens": None,
+            "error": friendly,
         }
 
     return {

@@ -80,18 +80,12 @@ def _render_knowledge_source() -> None:
         help="PDF, TXT, MD or DOCX — indexed per chat.",
     )
 
-    def file_submit():
-        current_files = st.session_state.get(st.session_state.uploader_key)
-        if current_files:
-            st.session_state["upload_file_messages"] = chat.upload_file(
-                current_files, st.session_state["current_chat_id"])
-
     def clear_submit():
         current_num = int(st.session_state.uploader_key.split("_")[-1])
         st.session_state.uploader_key = f"uploader_{current_num + 1}"
 
     build_col, clear_col = st.sidebar.columns(2)
-    build_col.button(
+    build_clicked = build_col.button(
         "Build",
         key="build_index",
         icon=":material/database:",
@@ -99,8 +93,15 @@ def _render_knowledge_source() -> None:
         width="stretch",
         disabled=not uploads,
         help="Embed the staged files into this chat's.",
-        on_click=file_submit,
     )
+    if build_clicked:
+        current_files = st.session_state.get(st.session_state.uploader_key)
+        if current_files:
+            names = ", ".join(f.name for f in current_files)
+            with st.spinner(f"Uploading and indexing {len(current_files)} file(s): {names}…"):
+                st.session_state["upload_file_messages"] = chat.upload_file(
+                    current_files, st.session_state["current_chat_id"])
+            st.toast(f"Finished indexing {len(current_files)} file(s).", icon=":material/database:")
     clear_col.button(
         "Clear",
         key="clear_index",

@@ -23,46 +23,10 @@ from rag import get_retriever
 
 chat_id = st.session_state["current_chat_id"]
 
-st.html(
-    """
-    <style>
-        /* 1. Force the main layout wrappers to stay locked at viewport height */
-        [data-testid="stAppViewContainer"],
-        [data-testid="stMainViewContainer"],
-        .main {
-            overflow: hidden !important;
-            height: 100vh !important;
-            max-height: 100vh !important;
-        }
-
-        /* 2. Style your target chat box using a custom key assignment */
-        .st-key-my_chat_box {
-            height: calc(100vh - 170px) !important;
-            overflow-y: auto !important;
-        }
-    </style>
-    """
-)
-
-st.markdown(
-    """
-    <style>
-        /* 1. Stop global main page from scrolling */
-        .stAppDeployContainer, [data-testid="stMain"], [data-testid="stAppViewContainer"] {
-            overflow: hidden !important;
-            height: 100vh !important;
-        }
-
-        /* 2. Target the specific chat container to lock its height to the viewport */
-        /* Note: We use the unique key "my_chat_box" which compiles to class .st-key-my_chat_box */
-        .st-key-my_chat_box {
-            height: calc(100vh - 180px) !important; /* Viewport height minus header/footer padding */
-            overflow-y: auto !important; /* Enforce scrolling strictly within this container */
-        }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+# NOTE: no global overflow/height lock here on purpose. Locking
+# stAppViewContainer to 100vh + overflow:hidden clipped st.chat_input off
+# the bottom of the viewport. The transcript already scrolls on its own via
+# st.container(height=420, autoscroll=True) below.
 
 try:
     record = chat.load_chat(chat_id)
@@ -243,7 +207,10 @@ with col_chat:
                             </div>
                             """
                         )
-                        st.markdown(answer)
+                        if isinstance(answer, str) and answer.lstrip().startswith("⚠️"):
+                            st.error(answer, icon=":material/error:")
+                        else:
+                            st.markdown(answer)
                         is_active = (active_model == model)
                         if st.button(
                             "Active" if is_active else f"Use {model}",
@@ -279,7 +246,11 @@ with col_chat:
                 chat.set_active_model(chat_id, None)
                 st.rerun()
 
-            thinking_placeholder = st.empty()
+        # Full-width placeholders ABOVE the input (thinking was indented
+        # inside the narrow r2 column, which squeezed st.status into a small
+        # box; upload rendered at page level, below the input entirely).
+        upload_placeholder = st.empty()
+        thinking_placeholder = st.empty()
         prompt = st.chat_input(
             "Ask a question about your documents…",
         accept_audio=False,
@@ -341,64 +312,102 @@ def process_text(text: str, chat_id: str):
     collection = chat.collection_name(chat_id)
 
     # Thinking indicator: mirrors a typical LLM chat (retrieval + generation)
-    thinking_label = f"Thinking with {active_model}…" if active_model else "Thinking with all 3 models…  retrieving + generating in parallel"
-    with st.status(thinking_label, expanded=True) as status:
-        st.write("Retrieving relevant chunks from your documents…")
-        if active_model is None:
-            final_state = graph.invoke({"query": text, "collection": collection})
-            st.write(f"Generating answers ({len(final_state.get('answers', {}))} models)…")
-            chat.record_compare_turn(
-                chat_id, text, final_state["answers"], docs=final_state.get("docs"),
-                stats=final_state.get("stats"))
-        else:
-            st.write(f"Generating answer with {active_model}…")
-            final_state = graph.invoke({
-                "query": text, "collection": collection, "active_model": active_model,
-            })
-            ans = None
-            for m, a in final_state["answers"].items():
-                if m.lower() == active_model.lower():
-                    ans = a
-                    break
+    thinking_label = f"Thinking with {active_model}…" if active_model else "Thinking with all 3 models… retrieving + generating in parallel"
+    try:
+        with st.status(thinking_label, expanded=False) as status:
+            st.write("Retrieving relevant chunks from your documents…")
+            if active_model is None:
+                final_state = graph.invoke({"query": text, "collection": collection})
+                st.write(f"Generating answers ({len(final_state.get('answers', {}))} models)…")
+                failed = [a for a in final_state.get("answers", {}).values()
+                          if isinstance(a, str) and a.lstrip().startswith("⚠️")]
+                if failed:
+                    for f in failed:
+                        st.error(f, icon=":material/error:")
+                    status.update(label="Done with errors", state="error", expanded=True)
+                else:
+                    status.update(label="Answer ready", state="complete", expanded=False)
+                chat.record_compare_turn(
+                    chat_id, text, final_state["answers"], docs=final_state.get("docs"),
+                    stats=final_state.get("stats"))
+            else:
+                st.write(f"Generating answer with {active_model}…")
+                final_state = graph.invoke({
+                    "query": text, "collection": collection, "active_model": active_model,
+                })
+                ans = None
+                for m, a in final_state["answers"].items():
+                    if m.lower() == active_model.lower():
+                        ans = a
+                        break
 
-            if ans is None:
-                # Model absent from the registry at runtime (router hit
-                # [END]): record nothing. Saving None would poison the
-                # transcript (None has no .get/.strip) and the analytics
-                # counters downstream.
-                logger.error(
-                    "No answer found for model %s -- turn NOT recorded",
-                    active_model)
-                st.error(
-                    f"{active_model} is not available right now -- "
-                    "question was not saved. Check Model settings / logs.",
-                    icon=":material/error:",
-                )
-                status.update(label="Model unavailable", state="error", expanded=False)
-                return final_state["answers"]
+                if ans is None:
+                    # Model absent from the registry at runtime (router hit
+                    # [END]): record nothing. Saving None would poison the
+                    # transcript (None has no .get/.strip) and the analytics
+                    # counters downstream.
+                    logger.error(
+                        "No answer found for model %s -- turn NOT recorded",
+                        active_model)
+                    st.error(
+                        f"{active_model} is not available right now -- "
+                        "question was not saved. Check Model settings / logs.",
+                        icon=":material/error:",
+                    )
+                    status.update(label="Model unavailable", state="error", expanded=False)
+                    return final_state["answers"]
 
-            chat.record_continue_turn(
-                chat_id, active_model, text, ans, docs=final_state.get("docs"),
-                stats=final_state.get("stats"))
-        status.update(label="Answer ready", state="complete", expanded=False)
+                if isinstance(ans, str) and ans.lstrip().startswith("⚠️"):
+                    st.error(ans, icon=":material/error:")
+                    status.update(label="Done with errors", state="error", expanded=True)
+                else:
+                    status.update(label="Answer ready", state="complete", expanded=False)
+
+                chat.record_continue_turn(
+                    chat_id, active_model, text, ans, docs=final_state.get("docs"),
+                    stats=final_state.get("stats"))
+    except Exception as exc:
+        # Retrieval/embedding failures (e.g. OpenAI 429 no-credits when
+        # USE_OLLAMA=false) raise out of graph.invoke — show them inline so
+        # the user knows why, instead of a raw traceback.
+        logger.exception("process_text failed")
+        st.error(f"Could not answer: {exc}", icon=":material/error:")
+        return {}
 
     return final_state["answers"]
 
 
 if prompt:
-    if prompt.files:
-        st.session_state["upload_file_messages"] = chat.upload_file(
-            prompt.files, chat_id)
-    if prompt.text and prompt.text.strip():
+    # Defensive: with accept_file set prompt is a ChatInputValue (.text/.files),
+    # otherwise it's a plain str. Never touch .text without checking.
+    if isinstance(prompt, str):
+        prompt_text = prompt
+        prompt_files = None
+    else:
+        prompt_text = getattr(prompt, "text", "") or ""
+        prompt_files = getattr(prompt, "files", None)
+    if prompt_files:
+        names = ", ".join(getattr(f, "name", "file") for f in prompt_files)
+        # Render INSIDE the chat card via the placeholder above the input —
+        # a bare st.status here would dock below/outside the input.
+        with upload_placeholder:
+            with st.status(f"Uploading {len(prompt_files)} file(s): {names}… embedding and indexing…", expanded=True) as ustatus:
+                st.write("Saving upload…")
+                st.session_state["upload_file_messages"] = chat.upload_file(
+                    prompt_files, chat_id)
+                st.write("Indexing complete.")
+                ustatus.update(label="Upload complete", state="complete", expanded=False)
+    if prompt_text and prompt_text.strip():
+        query_text = prompt_text.strip()
         # Show thinking indicator in the placeholder above the input (so it
         # appears inside the transcript, not below the page like arena)
         with thinking_placeholder:
-            process_text(prompt.text, chat_id)
+            process_text(query_text, chat_id)
         # Auto-rename: first user message becomes the title (one time)
         try:
             fresh = chat.load_chat(chat_id)
             if fresh.get("title", "New chat") == "New chat":
-                clean = prompt.text.strip().replace("\n", " ")[:50].strip()
+                clean = query_text.replace("\n", " ")[:50].strip()
                 if clean:
                     chat.rename_chat(chat_id, clean)
         except Exception:

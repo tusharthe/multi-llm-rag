@@ -18,6 +18,7 @@ import streamlit as st
 import chat_history as chat
 from components import empty_state, model_header, page_header, section_label
 from graph import graph
+from logger import logger
 from theme import MODEL_IDS, icon
 
 #: Fixed columns. The academic deliverable is always OpenAI + Anthropic +
@@ -120,7 +121,10 @@ else:
                 st.html(model_header(label, available=answer is not None))
 
                 if answer:
-                    st.markdown(answer)
+                    if answer.lstrip().startswith("⚠️"):
+                        st.error(answer, icon=":material/error:")
+                    else:
+                        st.markdown(answer)
                 else:
                     st.caption("No answer recorded for this model.")
 
@@ -161,28 +165,65 @@ else:
 
 # -------------------------------------------------------------------- input --
 
+upload_placeholder = st.empty()
 thinking_placeholder = st.empty()
-prompt = st.chat_input("Ask all models a question…")
+prompt = st.chat_input(
+    "Ask all models a question…",
+    accept_file="multiple",
+    file_type=["pdf", "txt", "md", "docx"],
+)
 
 if prompt:
-    if prompt.text and prompt.text.strip():
-        with thinking_placeholder:
-            with st.status("Thinking with all 3 models…  retrieving + generating in parallel", expanded=True) as status:
-                st.write("Retrieving relevant chunks from your documents…")
-                collection = chat.collection_name(chat_id)
-                final_state = graph.invoke(
-                    {"query": prompt.text, "collection": collection})
-                st.write(f"Generating answers ({len(final_state.get('answers', {}))} models)…")
-                chat.record_compare_turn(
-                    chat_id, prompt.text, final_state["answers"],
-                    docs=final_state.get("docs"),
-                    stats=final_state.get("stats"))
-                status.update(label="Answer ready", state="complete", expanded=False)
+    # st.chat_input returns a plain str unless accept_file is set (then it
+    # returns a ChatInputValue with .text/.files). Handle both so a Str
+    # return never crashes on .text (was: AttributeError: 'str' has no
+    # attribute 'text').
+    if isinstance(prompt, str):
+        prompt_text = prompt
+        prompt_files = None
+    else:
+        prompt_text = getattr(prompt, "text", "") or ""
+        prompt_files = getattr(prompt, "files", None)
+    if prompt_files:
+        names = ", ".join(getattr(f, "name", "file") for f in prompt_files)
+        # Above the input — a bare st.status here would render below/outside it.
+        with upload_placeholder:
+            with st.status(f"Uploading {len(prompt_files)} file(s): {names}… embedding and indexing…", expanded=True) as ustatus:
+                st.write("Saving upload…")
+                st.session_state["upload_file_messages"] = chat.upload_file(
+                    prompt_files, chat_id)
+                st.write("Indexing complete.")
+                ustatus.update(label="Upload complete", state="complete", expanded=False)
+    if prompt_text and prompt_text.strip():
+        query_text = prompt_text.strip()
+        try:
+            with thinking_placeholder:
+                with st.status("Thinking with all 3 models… retrieving + generating in parallel", expanded=False) as status:
+                    st.write("Retrieving relevant chunks from your documents…")
+                    collection = chat.collection_name(chat_id)
+                    final_state = graph.invoke(
+                        {"query": query_text, "collection": collection})
+                    st.write(f"Generating answers ({len(final_state.get('answers', {}))} models)…")
+                    chat.record_compare_turn(
+                        chat_id, query_text, final_state["answers"],
+                        docs=final_state.get("docs"),
+                        stats=final_state.get("stats"))
+                    failed = [a for a in final_state.get("answers", {}).values()
+                              if isinstance(a, str) and a.lstrip().startswith("⚠️")]
+                    if failed:
+                        status.update(label="Done with errors", state="error", expanded=True)
+                        for f in failed:
+                            st.error(f, icon=":material/error:")
+                    else:
+                        status.update(label="Answer ready", state="complete", expanded=False)
+        except Exception as exc:
+            logger.exception("Arena query failed")
+            st.error(f"Could not answer: {exc}", icon=":material/error:")
         # Auto-rename on first message (one time)
         try:
             fresh = chat.load_chat(chat_id)
             if fresh.get("title", "New chat") == "New chat":
-                clean = prompt.text.strip().replace("\n", " ")[:50].strip()
+                clean = query_text.replace("\n", " ")[:50].strip()
                 if clean:
                     chat.rename_chat(chat_id, clean)
         except Exception:
